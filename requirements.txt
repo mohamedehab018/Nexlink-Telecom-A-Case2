@@ -1,1 +1,29 @@
-fastmcp
+# Runtime dependencies for the Nextlink AI support system.
+#
+# RAG is intentionally runnable offline: the default sentence-transformers
+# provider is a performance upgrade over the deterministic OfflineEmbedder
+# (TF-IDF), which requires none of the heavy ML stack.
+
+# --- MCP server + agent ---
+fastmcp>=2.0,<3
+mcp>=1.28,<2
+langchain
+langchain-groq
+langchain-mcp-adapters
+python-dotenv>=1.0
+pydantic>=2.0
+jsonschema>=4.0
+
+# --- Vector store + retrieval ---
+qdrant-client>=1.12
+numpy
+
+# --- Agentic RAG graph ---
+langgraph
+langchain-core
+
+# --- Keyword (BM25) leg ---
+rank-bm25>=0.2.2
+
+# --- Optional: semantic embeddings ---
+sentence-transformers>=3.0

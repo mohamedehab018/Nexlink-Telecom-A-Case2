@@ -1,0 +1,138 @@
+{
+  "description": "Nexlink ISP domain-specific retrieval benchmark. Each question carries the categories an architecture is expected to excel at: basic (naive), citation (hybrid, exact identifiers), multihop (agentic, decomposition). A metadata_filter question demonstrates pre-search payload filtering.",
+  "questions": [
+    {
+      "id": "basic-1",
+      "category": "basic",
+      "question": "Which Nextlink internet plan costs the most per month, and what is its price?",
+      "expected_all": ["premium", "60"],
+      "gold_docs": ["speed_throttling_guide.md"],
+      "notes": "Single fact, plain vocabulary."
+    },
+    {
+      "id": "basic-2",
+      "category": "basic",
+      "question": "What does a solid blue Wi-Fi LED indicate on the Nextlink-Optic-V1?",
+      "expected_all": ["wi-fi"],
+      "expected_any": ["radios", "broadcasting"],
+      "gold_docs": ["optic_v1_spec.md"],
+      "notes": "Hardware lookup from a spec sheet table."
+    },
+    {
+      "id": "basic-3",
+      "category": "basic",
+      "question": "How much does a Nextlink technician dispatch cost the customer?",
+      "expected_all": ["150"],
+      "gold_docs": ["technician_dispatch_policy.md"],
+      "notes": "Direct numeric lookup."
+    },
+    {
+      "id": "basic-4",
+      "category": "basic",
+      "question": "What is the first step a support agent should take when a customer reports a whole-home no-internet outage?",
+      "expected_all": ["scope"],
+      "expected_any": ["confirm", "one device", "whole home"],
+      "gold_docs": ["no_internet_guide.md"],
+      "notes": "Procedural start of a troubleshooting guide."
+    },
+    {
+      "id": "basic-5",
+      "category": "basic",
+      "question": "What is the healthy optical receive power range for the Nextlink-Optic-V1 ONT?",
+      "expected_all": ["-8", "-27"],
+      "gold_docs": ["optic_v1_spec.md"],
+      "notes": "Range lookup; numbers embed indistinctly, partially lexical."
+    },
+    {
+      "id": "citation-1",
+      "category": "citation",
+      "question": "What does error code ERR-4091 mean?",
+      "expected_all": ["ERR-4091", "credit", "limit"],
+      "expected_any": ["500", "hard cap", "exceeded"],
+      "gold_docs": ["error_code_reference.md", "service_credit_policy.md"],
+      "notes": "Exact identifier that does not embed distinctively."
+    },
+    {
+      "id": "citation-2",
+      "category": "citation",
+      "question": "What is the fix for error code ERR-2210?",
+      "expected_all": ["ERR-2210", "30"],
+      "expected_any": ["lock", "manager", "attempt"],
+      "gold_docs": ["error_code_reference.md", "customer_support_manual.md"],
+      "notes": "Exact identifier; remedy lives in the code catalog."
+    },
+    {
+      "id": "citation-3",
+      "category": "citation",
+      "question": "Per Section 3.2 of the service credit policy, what happens to credits above $25.00?",
+      "expected_all": ["3.2", "supervisor"],
+      "expected_any": ["approval", "sign-off", "signoff"],
+      "gold_docs": ["service_credit_policy.md"],
+      "notes": "Section citation; needs the exact section heading."
+    },
+    {
+      "id": "citation-4",
+      "category": "citation",
+      "question": "Which hardware model logs ERR-7745, and which 5 GHz channel change fixes the dropouts?",
+      "expected_all": ["ERR-7745", "wifi", "non-dfs"],
+      "expected_any": ["36", "48", "149", "165", "dfs"],
+      "gold_docs": ["wifi_v3_spec.md", "error_code_reference.md"],
+      "notes": "Error code to model mapping plus a channel reference."
+    },
+    {
+      "id": "citation-5",
+      "category": "citation",
+      "question": "What is the remedy for ERR-5513 before a technician dispatch is scheduled?",
+      "expected_all": ["ERR-5513", "resync"],
+      "expected_any": ["reseat", "fiber", "drop"],
+      "gold_docs": ["optic_v1_spec.md", "error_code_reference.md"],
+      "notes": "Code-first question with a multi-step remedy."
+    },
+    {
+      "id": "multihop-1",
+      "category": "multihop",
+      "question": "A customer's Nextlink-Coax-V2 reports ERR-3321 after a thunderstorm and the modem still drops after two power cycles. What is the recommended next step and which policy governs it?",
+      "expected_all": ["dispatch"],
+      "expected_any": ["technician", "ERR-3321", "physical", "drop"],
+      "gold_docs": ["coax_v2_spec.md", "technician_dispatch_policy.md"],
+      "notes": "Combines a hardware remedy with a dispatch policy decision."
+    },
+    {
+      "id": "multihop-2",
+      "category": "multihop",
+      "question": "A Nextlink-WiFi-V3 router near an airport keeps logging ERR-7745. What is the root cause and which configuration changes stop the dropouts?",
+      "expected_all": ["ERR-7745", "dfs", "radar"],
+      "expected_any": ["non-dfs", "channel", "auto-dfs"],
+      "gold_docs": ["wifi_v3_spec.md", "wifi_optimization_guide.md"],
+      "notes": "Cause plus two config changes across two documents."
+    },
+    {
+      "id": "multihop-3",
+      "category": "multihop",
+      "question": "An Optic-V1 customer has optical power at -28 dBm with ERR-5513 and a verified 6-hour outage. Does the outage qualify for a service credit and how is the credit computed?",
+      "expected_all": ["4", "pro-rated"],
+      "expected_any": ["credit", "qualif", "0.50", "prorat"],
+      "gold_docs": ["optic_v1_spec.md", "outage_handbook.md", "service_credit_policy.md"],
+      "notes": "Three hops: hardware fault + outage eligibility + computation."
+    },
+    {
+      "id": "multihop-4",
+      "category": "multihop",
+      "question": "A support agent wants to apply a $150.00 credit for a 6-hour outage on an account without supervisor approval. Which policy threshold blocks the credit, and which error code applies if the account is also in arrears?",
+      "expected_all": ["25", "supervisor", "ERR-6602"],
+      "expected_any": ["approval", "sign-off", "overdue"],
+      "gold_docs": ["service_credit_policy.md", "customer_support_manual.md", "error_code_reference.md"],
+      "notes": "Policy threshold plus a secondary error code lookup."
+    },
+    {
+      "id": "filter-1",
+      "category": "metadata_filter",
+      "question": "Restricting to the error code reference document, what does ERR-9910 mean?",
+      "metadata_filter": {"category": "troubleshooting", "source_doc": "error_code_reference.md"},
+      "expected_all": ["ERR-9910", "dispatch", "blocked"],
+      "expected_any": ["pin", "verified", "session"],
+      "gold_docs": ["error_code_reference.md"],
+      "notes": "Exercises pre-search metadata filtering."
+    }
+  ]
+}
