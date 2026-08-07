@@ -1,26 +1,22 @@
 import asyncio
 import os
-import re
-import sys
 import warnings
+import sys
 from dotenv import load_dotenv
 
 # Silence verbose warnings for a cleaner CLI
 warnings.filterwarnings("ignore")
 load_dotenv()
 
-# Make the repository root importable so `rag` resolves no matter how the
-# agent is launched (flat layout vs. nested agent/ directory).
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+# Import the repository-local memory package when this file is run directly.
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
+from memory import MemorySystem
 
-from langchain_core.tools import tool
 from langchain_groq import ChatGroq
 from langchain.agents import create_agent
 from langchain_mcp_adapters.client import MultiServerMCPClient
-
-from rag.agentic import CODE_RE, MODEL_RE
-from rag.config import load_config
-from rag.pipeline import RAGPipeline
 
 # In agent.py
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -60,53 +56,6 @@ async def run_agent():
         temperature=0.0,
     )
 
-    # ------------------------------------------------------------------
-    # Knowledge-base (RAG) tool.
-    #
-    # Routes to the retrieval architecture by query shape and runs every
-    # answer through the Self-RAG verification gate inside RAGPipeline:
-    #   1. hybrid (vector + BM25)  -> default for most queries
-    #   2. agentic (LangGraph)     -> multihop / multi-identifier queries
-    # If verification fails the pipeline retries agentically and, if the
-    # answer still cannot be grounded, the tool reports "not found" instead
-    # of hallucinating.
-    # ------------------------------------------------------------------
-    rag_config = load_config()
-    rag_pipeline = RAGPipeline(config=rag_config, auto_index=True)
-    print(f"Knowledge base indexed: {rag_pipeline.corpus_size} chunks")
-
-    def _route(query: str) -> str:
-        identifiers = len(CODE_RE.findall(query)) + len(MODEL_RE.findall(query))
-        is_multihop = (
-            identifiers >= 2
-            or len(re.findall(r"\b(?:and|then|also)\b", query, flags=re.IGNORECASE)) >= 1
-            or len(re.findall(r"\?", query)) > 1
-        )
-        return "agentic" if is_multihop else "hybrid"
-
-    @tool
-    def nextlink_knowledge_base(query: str) -> str:
-        """Look up Nextlink knowledge: error codes (ERR-xxxx), hardware specs,
-        plan prices, credit/dispatch policies, and troubleshooting guides.
-
-        Use this tool for policy questions, error-code meanings, device specs,
-        and step-by-step fixes. Do NOT use it for account-specific data or
-        actions -- those go through the account/CRM tools.
-        """
-        arch = _route(query)
-        try:
-            result = rag_pipeline.answer(query, architecture=arch, verify=True)
-        except Exception as err:  # noqa: BLE001
-            return f"Knowledge base lookup failed: {err}"
-        sources = sorted({c.source for c in result.contexts})
-        if not result.answer or not result.contexts:
-            return (
-                "I could not find a grounded answer for that in the knowledge "
-                "base (Self-RAG verification found no supporting evidence)."
-            )
-        header = f"[architecture={arch}, sources={', '.join(sources)}]"
-        return f"{header}\n{result.answer}"
-
     # Locate server.py. Support both a flat layout (server.py next to this
     # file, as delivered) and a nested layout (../mcp_server/server.py),
     # since the previous hardcoded "../mcp_server/server.py" path silently
@@ -144,9 +93,6 @@ async def run_agent():
     tools = await mcp_client.get_tools()
     print(f"Loaded {len(tools)} tools from MCP server.\n")
 
-    # Append the knowledge-base tool to the MCP tools
-    tools = list(tools) + [nextlink_knowledge_base]
-
     # Clear instructions for the agent on step-by-step tool execution
     system_prompt = (
     "You are the Nextlink ISP Support Assistant.\n"
@@ -154,16 +100,6 @@ async def run_agent():
     "Execute tool calls step-by-step in logical order.\n"
     "Explain all technical errors in clear, helpful, plain English.\n\n"
 
-    "=====================================================\n"
-    "0. TOOL ROUTING (KNOWLEDGE vs. ACCOUNT DATA)\n"
-    "=====================================================\n"
-    "• Use nextlink_knowledge_base(query) for anything that is general knowledge:\n"
-    "  - Error-code meanings and fixes (ERR-xxxx)\n"
-    "  - Hardware specs (Optic-V1, Coax-V2, WiFi-V3), LED references, signal ranges\n"
-    "  - Plan prices, credit/dispatch policies, troubleshooting steps, outage handling\n"
-    "• Use the account/CRM tools (search/get summary/diagnostics/dispatch/credit) for\n"
-    "  account-specific data and transactions. Never fabricate a policy or an error\n"
-    "  code from memory -- look it up in the knowledge base first.\n\n"
     "=====================================================\n"
     "1. CORE NAVIGATION & QUERY RULES\n"
     "=====================================================\n"
@@ -226,9 +162,10 @@ async def run_agent():
 
     print("Agent ready! (Type 'exit' or 'quit' to end session)\n")
 
-    # Maintain conversation state array across turns
-    chat_history = []
-
+    # Short-term rolling context is kept separately from durable memory.
+    # Its additive tables live in the existing project database.
+    memory = MemorySystem(os.path.join(REPO_ROOT, "db", "nextlink.db"))
+    active_user_id = "anonymous"
     # Main interactive chat loop
     while True:
         try:
@@ -241,17 +178,24 @@ async def run_agent():
             if not user_input:
                 continue
 
-            # Append the new user message to the active history
-            chat_history.append(("user", user_input))
+            memory.remember("user", user_input, active_user_id)
+            # Consolidation is periodic and independent of overflow routing.
+            memory.consolidation.run_if_due()
 
-            # Pass the COMPLETE chat history so the agent remembers context
-            result = await agent.ainvoke({"messages": chat_history})
-
-            # Update chat history with the full graph state (includes AI responses and tool outputs)
-            chat_history = result["messages"]
+            # The rolling buffer, rather than an ever-growing chat_history,
+            # is the transcript sent on each turn. The scratchpad and only
+            # verified durable facts are sent separately.
+            verified_memory = memory.prompt_context(user_input, active_user_id)
+            rolling_messages = [
+                (item["role"], item["content"])
+                for item in memory.short_term.context()
+                if item["role"] in {"user", "assistant"}
+            ]
+            result = await agent.ainvoke({"messages": [("system", verified_memory)] + rolling_messages})
 
             # Print latest message response
-            last_message = chat_history[-1]
+            last_message = result["messages"][-1]
+            memory.remember("assistant", last_message.content, active_user_id)
             print(f"\nAgent:\n{last_message.content}\n")
 
         except KeyboardInterrupt:
