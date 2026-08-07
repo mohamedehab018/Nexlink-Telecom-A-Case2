@@ -5,7 +5,8 @@ and troubleshooting guides. Exposes the naive / hybrid / agentic retrieval
 architectures plus the Self-RAG-style verification gate used by the agent.
 """
 
+from rag.graph_rag import GraphRAG  # noqa: F401
 from rag.pipeline import RAGPipeline  # noqa: F401
 from rag.self_rag import SelfRAGVerifier  # noqa: F401
 
-__all__ = ["RAGPipeline", "SelfRAGVerifier"]
+__all__ = ["RAGPipeline", "SelfRAGVerifier", "GraphRAG"]

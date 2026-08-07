@@ -35,11 +35,12 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from rag.config import load_config  # noqa: E402
 from rag.pipeline import RAGPipeline  # noqa: E402
 
-ARCH_ORDER = ["naive", "hybrid", "agentic"]
+ARCH_ORDER = ["naive", "hybrid", "agentic", "graph"]
 ARCH_LABELS = {
     "naive": "Naive RAG",
     "hybrid": "Hybrid (vector + BM25)",
     "agentic": "Agentic RAG",
+    "graph": "Graph RAG (knowledge graph)",
 }
 
 
@@ -134,23 +135,17 @@ def build_architecture_tagged_rows(
     return flat
 
 
-def build_architecture_tagged_rows(
-    all_rows: Dict[str, List[QuestionResult]],
-) -> List[QuestionResult]:
-    flat: List[QuestionResult] = []
-    for arch in ARCH_ORDER:
-        for r in all_rows.get(arch, []):
-            setattr(r, "architecture", arch)
-            flat.append(r)
-    return flat
+def _arch_headers() -> List[str]:
+    return [ARCH_LABELS[arch] for arch in ARCH_ORDER]
 
 
 def per_category_table(all_rows: Dict[str, List[QuestionResult]]) -> str:
+    headers = _arch_headers()
     lines = [
         "### Accuracy by question category",
         "",
-        "| Category | Naive RAG | Hybrid | Agentic RAG |",
-        "| --- | --- | --- | --- |",
+        f"| Category | {' | '.join(headers)} |",
+        f"| --- | {' | '.join(['---'] * len(headers))} |",
     ]
     categories = ["basic", "citation", "multihop", "metadata_filter"]
     for cat in categories:
@@ -166,11 +161,12 @@ def per_category_table(all_rows: Dict[str, List[QuestionResult]]) -> str:
 
 
 def detail_table(all_rows: Dict[str, List[QuestionResult]]) -> str:
+    headers = _arch_headers()
     lines = [
-        "### Per-question detail (hybrid vs agentic trace)",
+        "### Per-question detail",
         "",
-        "| Question | Naive | Hybrid | Agentic |",
-        "| --- | --- | --- | --- |",
+        f"| Question | {' | '.join(headers)} |",
+        f"| --- | {' | '.join(['---'] * len(headers))} |",
     ]
     by_id: Dict[str, List[QuestionResult]] = {}
     for arch in ARCH_ORDER:
@@ -179,11 +175,7 @@ def detail_table(all_rows: Dict[str, List[QuestionResult]]) -> str:
     for qid, rows in by_id.items():
         q = rows[0]
         mark = {arch: ("✓" if _by_arch(rows, arch).correct else "✗") for arch in ARCH_ORDER}
-        cells = [
-            mark["naive"],
-            mark["hybrid"],
-            mark["agentic"],
-        ]
+        cells = [mark[arch] for arch in ARCH_ORDER]
         lines.append(f"| `{qid}` ({q.category}) | {' | '.join(cells)} |")
     return "\n".join(lines)
 
