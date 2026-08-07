@@ -1,10 +1,12 @@
-# Nexlink Telecom Agent - Memory & Context Management Extension
+# Nexlink Telecom Agent - Context Window Management Extension
 
 ## Overview
 
 This project extends the existing Nexlink Telecom MCP Agent by adding context window management capabilities for long-running conversations.
 
 The main challenge addressed is handling long telecom support conversations containing many tool outputs. Large tool responses can increase context size and hide important user information.
+
+The objective is to maintain reliable agent performance during long conversations by reducing unnecessary context information while keeping critical user requirements available for decision making.
 
 To solve this problem, we implemented and evaluated multiple context management strategies and selected the most suitable approach based on measured results.
 
@@ -124,6 +126,8 @@ Purpose:
 
 # Long Context Evaluation
 
+All strategies share the same test scenarios to ensure a fair comparison between different context management approaches.
+
 The evaluation uses a fixed test suite implemented in:
 
 ```
@@ -171,12 +175,12 @@ The following metrics are measured:
 
 # Evaluation Results
 
-| Strategy                | Accuracy | Correct | Tokens | Latency  |
-| ----------------------- | -------- | ------- | ------ | -------- |
-| Sliding Window          | 0.0%     | 0/10    | 22109  | 0.005623 |
-| Observation Masking     | 80.0%    | 8/10    | 7491   | 0.001663 |
-| Recursive Summarization | 80.0%    | 8/10    | 690    | 0.000310 |
-| Zone Pruning            | 80.0%    | 8/10    | 19746  | 0.003913 |
+| Strategy                | Accuracy | Correct | Tokens | Latency (sec) |
+| ----------------------- | -------- | ------- | ------ | ------------- |
+| Sliding Window          | 0.0%     | 0/10    | 22109  | 0.005623      |
+| Observation Masking     | 80.0%    | 8/10    | 7491   | 0.001663      |
+| Recursive Summarization | 80.0%    | 8/10    | 690    | 0.000310      |
+| Zone Pruning            | 80.0%    | 8/10    | 19746  | 0.003913      |
 
 ---
 
@@ -186,7 +190,7 @@ The following metrics are measured:
 
 Observation Masking was selected as the production strategy.
 
-Although Recursive Summarization achieved lower token usage, Observation Masking better matches the telecom agent problem because context growth mainly comes from large tool outputs.
+Although Recursive Summarization achieved the lowest token usage, Observation Masking was selected because it directly addresses the main source of context expansion in telecom workflows: large diagnostic tool outputs.
 
 It provides a practical balance between:
 
@@ -202,6 +206,8 @@ It provides a practical balance between:
 The current implementation focuses on context window management evaluation.
 
 Only features implemented in the repository are documented here. Features that are not implemented in code are not claimed as supported.
+
+Future improvements may include combining observation masking with lightweight summarization to further reduce token usage while maintaining accuracy.
 
 ---
 
@@ -222,3 +228,4 @@ The script executes all strategies and prints the comparison results.
 The evaluation demonstrates that context management should be selected according to the real source of context growth.
 
 For the Nexlink Telecom Agent, Observation Masking provides the most suitable solution because it controls large tool-output expansion while preserving important user information.
+
