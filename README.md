@@ -65,6 +65,21 @@ The demo visibly shows all requested cases:
 
 `agent/agent.py` now creates `MemorySystem` alongside the existing MCP client. Each user/assistant turn enters the rolling buffer, the periodic consolidator is checked, and only verified episodic/semantic memories are injected as a system context message. Memory tables are additive tables in the existing `db/nextlink.db`, so the extension visibly reuses the project database without copying or changing the existing MCP schema; the database itself is not committed by this module.
 
+## RAG Retrieval Architectures
+
+Nextlink's knowledge base (policies, error codes, hardware specs, troubleshooting guides) is served by four retrieval architectures, all benchmarked offline on 15 domain questions in `retrieval_eval/results.md` (regenerate with `python retrieval_eval/run_eval.py --provider offline`):
+
+| Architecture | Task Accuracy | Avg Input Tokens | Avg Latency (s) |
+| --- | --- | --- | --- |
+| Naive RAG | 13/15 | 281 | 0.02s |
+| Hybrid (vector + BM25) | 14/15 | 309 | 0.00s |
+| Agentic RAG | 15/15 | 326 | 0.06s |
+| Graph RAG (knowledge graph) | 15/15 | 711 | 0.01s |
+
+Graph RAG (implemented in `rag/graph_rag.py`) builds an in-memory knowledge graph: consecutive chunks of a document are linked, and chunks sharing a distinctive identifier (`ERR-xxxx` error code or `Nextlink-...-V<n>` model) are linked too. Hybrid search seeds the context verbatim, personalized PageRank selects the reachable neighborhood, and the best candidates by semantic similarity are appended. This pulls in the cross-document evidence a flat ranker misses -- e.g. the *definition* of `ERR-6602` behind a policy that cites it -- at the cost of more input tokens.
+
+The agent routes to the cheapest sufficient architecture via `_route()` in `agent/agent.py` (hybrid by default, agentic for multi-hop questions). Self-RAG verification is gated by `RAG_VERIFY_RELEVANCE_THRESHOLD`; see `.env.example`.
+
 ## The Solution
 
 We built an **MCP (Model Context Protocol) Server** to act as a secure, intelligent bridge. 

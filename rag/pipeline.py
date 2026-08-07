@@ -15,6 +15,7 @@ from rag.agentic import AgenticRAG
 from rag.config import RAGConfig, load_config
 from rag.embeddings import EmbeddingProvider, create_embedding_provider
 from rag.generators import ExtractiveGenerator, Generator, GroqGenerator
+from rag.graph_rag import GraphRAG
 from rag.ingest import Chunk, load_and_chunk
 from rag.retrievers import HybridSearch, NaiveRAG
 from rag.self_rag import SelfRAGVerifier
@@ -42,12 +43,14 @@ class RAGPipeline:
 
         self.naive = NaiveRAG(self.store, self.generator, self.config)
         self.hybrid = HybridSearch(self.store, self.generator, self.config)
+        self.graph = GraphRAG(self.store, self.generator, self.config, hybrid=self.hybrid)
         self.agentic = AgenticRAG(
             self.store, self.generator, self.config, hybrid=self.hybrid
         )
         self.architectures: Dict[str, RAGArchitecture] = {
             "naive": self.naive,
             "hybrid": self.hybrid,
+            "graph": self.graph,
             "agentic": self.agentic,
         }
 
@@ -95,6 +98,7 @@ class RAGPipeline:
             self.store.ensure_collection()
         written = self.store.upsert_chunks(chunks)
         self.hybrid._bm25 = None  # force BM25 rebuild on next use
+        self.graph.invalidate()  # force the knowledge graph to rebuild
         return written
 
     @property

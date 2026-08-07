@@ -1,5 +1,6 @@
 import asyncio
 import os
+import re
 import warnings
 import sys
 from dotenv import load_dotenv
@@ -14,29 +15,15 @@ if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 from memory import MemorySystem
 
+from langchain_core.tools import tool
 from langchain_groq import ChatGroq
 from langchain.agents import create_agent
 from langchain_mcp_adapters.client import MultiServerMCPClient
 
-# In agent.py
-script_dir = os.path.dirname(os.path.abspath(__file__))
-server_script = os.path.abspath(os.path.join(script_dir, "..", "mcp_server", "server.py"))
-db_path = os.path.abspath(os.path.join(script_dir, "..", "db", "nextlink.db"))
+from rag.agentic import CODE_RE, MODEL_RE
+from rag.config import load_config
+from rag.pipeline import RAGPipeline
 
-mcp_client = MultiServerMCPClient(
-    {
-        "nextlink": {
-            "transport": "stdio",
-            "command": "python",
-            "args": [server_script],
-            # Explicitly force the server subprocess to use the real database path:
-            "env": {
-                **os.environ,
-                "NEXLINK_DB_PATH": db_path
-            }
-        }
-    }
-)
 
 async def run_agent():
     print("=" * 60)
@@ -55,6 +42,49 @@ async def run_agent():
         groq_api_key=api_key,
         temperature=0.0,
     )
+
+    # ------------------------------------------------------------------
+    # Knowledge-base (RAG) tool.
+    #
+    # Routes to the retrieval architecture by query shape:
+    #   1. hybrid (vector + BM25)  -> default for most queries
+    #   2. agentic (LangGraph)     -> multihop / multi-identifier queries
+    # ------------------------------------------------------------------
+    rag_config = load_config()
+    rag_pipeline = RAGPipeline(config=rag_config, auto_index=True)
+    print(f"Knowledge base indexed: {rag_pipeline.corpus_size} chunks")
+
+    def _route(query: str) -> str:
+        identifiers = len(CODE_RE.findall(query)) + len(MODEL_RE.findall(query))
+        is_multihop = (
+            identifiers >= 2
+            or len(re.findall(r"\b(?:and|then|also)\b", query, flags=re.IGNORECASE)) >= 1
+            or len(re.findall(r"\?", query)) > 1
+        )
+        return "agentic" if is_multihop else "hybrid"
+
+    @tool
+    def nextlink_knowledge_base(query: str) -> str:
+        """Look up Nextlink knowledge: error codes (ERR-xxxx), hardware specs,
+        plan prices, credit/dispatch policies, and troubleshooting guides.
+
+        Use this tool for policy questions, error-code meanings, device specs,
+        and step-by-step fixes. Do NOT use it for account-specific data or
+        actions -- those go through the account/CRM tools.
+        """
+        arch = _route(query)
+        try:
+            result = rag_pipeline.answer(query, architecture=arch, verify=False)
+        except Exception as err:  # noqa: BLE001
+            return f"Knowledge base lookup failed: {err}"
+        sources = sorted({c.source for c in result.contexts})
+        if not result.answer or not result.contexts:
+            return (
+                "I could not find a grounded answer for that in the knowledge "
+                "base."
+            )
+        header = f"[architecture={arch}, sources={', '.join(sources)}]"
+        return f"{header}\n{result.answer}"
 
     # Locate server.py. Support both a flat layout (server.py next to this
     # file, as delivered) and a nested layout (../mcp_server/server.py),
@@ -79,12 +109,18 @@ async def run_agent():
     print("Connecting to local MCP server...")
     
     # Establish connection via stdio transport
+    db_path = os.path.abspath(os.path.join(script_dir, "..", "db", "nextlink.db"))
     mcp_client = MultiServerMCPClient(
         {
             "nextlink": {
                 "transport": "stdio",
                 "command": "python",
-                "args": [server_script]
+                "args": [server_script],
+                # Explicitly force the server subprocess to use the real database path:
+                "env": {
+                    **os.environ,
+                    "NEXLINK_DB_PATH": db_path
+                }
             }
         }
     )
@@ -93,12 +129,26 @@ async def run_agent():
     tools = await mcp_client.get_tools()
     print(f"Loaded {len(tools)} tools from MCP server.\n")
 
+    # Append the knowledge-base tool to the MCP tools
+    tools = list(tools) + [nextlink_knowledge_base]
+
     # Clear instructions for the agent on step-by-step tool execution
     system_prompt = (
     "You are the Nextlink ISP Support Assistant.\n"
     "Always use available tools to query customer data and perform support operations.\n"
     "Execute tool calls step-by-step in logical order.\n"
     "Explain all technical errors in clear, helpful, plain English.\n\n"
+
+    "=====================================================\n"
+    "0. TOOL ROUTING (KNOWLEDGE vs. ACCOUNT DATA)\n"
+    "=====================================================\n"
+    "• Use nextlink_knowledge_base(query) for anything that is general knowledge:\n"
+    "  - Error-code meanings and fixes (ERR-xxxx)\n"
+    "  - Hardware specs (Optic-V1, Coax-V2, WiFi-V3), LED references, signal ranges\n"
+    "  - Plan prices, credit/dispatch policies, troubleshooting steps, outage handling\n"
+    "• Use the account/CRM tools (search/get summary/diagnostics/dispatch/credit) for\n"
+    "  account-specific data and transactions. Never fabricate a policy or an error\n"
+    "  code from memory -- look it up in the knowledge base first.\n\n"
 
     "=====================================================\n"
     "1. CORE NAVIGATION & QUERY RULES\n"
