@@ -9,8 +9,30 @@ from .stores import MemoryStore
 from .verification import verify_memory_recall
 
 
+def _default_db_path() -> Path:
+    """Resolves to the SAME sqlite file the live MCP server actually reads
+    from (mcp_server/db.py's own candidate list). The project's db file is
+    named 'nexlink.db' -- no 't' -- a one-letter naming quirk baked into the
+    original schema. An earlier draft of this module defaulted to
+    'nextlink.db' (matching the company name "Nextlink" instead of the
+    actual filename) and silently created/wrote to an unrelated, empty
+    sqlite file next to the real one. Keep this list in sync with
+    mcp_server/db.py's _CANDIDATE_PATHS if either ever changes.
+    """
+    here = Path(__file__).resolve().parent
+    candidates = [
+        here.parent / "mcp_server" / "nexlink.db",
+        here.parent / "db" / "nexlink.db",   
+        Path.cwd() / "nexlink.db",
+        Path.cwd() / "db" / "nexlink.db",
+    ]
+    for c in candidates:
+        if c.is_file() and c.stat().st_size > 0:
+            return c
+    return candidates[1]
 class MemorySystem:
-    def __init__(self, db_path: str | Path = "db/nextlink.db", max_items: int = 20):
+    def __init__(self, db_path: str | Path | None = None, max_items: int = 20):
+        db_path = db_path or _default_db_path()
         self.store, self.router = MemoryStore(db_path), PromoteOrDropRouter()
         self.short_term = ShortTermMemory(max_items, self._handle_overflow)
         self.consolidation = ConsolidationLayer(self.store)

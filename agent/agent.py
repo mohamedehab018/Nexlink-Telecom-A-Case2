@@ -47,8 +47,8 @@ async def run_agent():
     # Knowledge-base (RAG) tool.
     #
     # Routes to the retrieval architecture by query shape:
-    #   1. hybrid (vector + BM25)  -> default for most queries
-    #   2. agentic (LangGraph)     -> multihop / multi-identifier queries
+    #    1. hybrid (vector + BM25)  -> default for most queries
+    #    2. agentic (LangGraph)     -> multihop / multi-identifier queries
     # ------------------------------------------------------------------
     rag_config = load_config()
     rag_pipeline = RAGPipeline(config=rag_config, auto_index=True)
@@ -87,12 +87,7 @@ async def run_agent():
         return f"{header}\n{result.answer}"
 
     # Locate server.py. Support both a flat layout (server.py next to this
-    # file, as delivered) and a nested layout (../mcp_server/server.py),
-    # since the previous hardcoded "../mcp_server/server.py" path silently
-    # pointed at a nonexistent file in the flat layout, which meant the
-    # agent had NO tools at all and was just improvising plausible-sounding
-    # replies -- explaining symptoms like "forgetting" an account_id it had
-    # never actually looked up via a real tool call.
+    # file, as delivered) and a nested layout (../mcp_server/server.py).
     script_dir = os.path.dirname(os.path.abspath(__file__))
     candidate_paths = [
         os.path.join(script_dir, "server.py"),
@@ -134,73 +129,73 @@ async def run_agent():
 
     # Clear instructions for the agent on step-by-step tool execution
     system_prompt = (
-    "You are the Nextlink ISP Support Assistant.\n"
-    "Always use available tools to query customer data and perform support operations.\n"
-    "Execute tool calls step-by-step in logical order.\n"
-    "Explain all technical errors in clear, helpful, plain English.\n\n"
+        "You are the Nextlink ISP Support Assistant.\n"
+        "Always use available tools to query customer data and perform support operations.\n"
+        "Execute tool calls step-by-step in logical order.\n"
+        "Explain all technical errors in clear, helpful, plain English.\n\n"
 
-    "=====================================================\n"
-    "0. TOOL ROUTING (KNOWLEDGE vs. ACCOUNT DATA)\n"
-    "=====================================================\n"
-    "• Use nextlink_knowledge_base(query) for anything that is general knowledge:\n"
-    "  - Error-code meanings and fixes (ERR-xxxx)\n"
-    "  - Hardware specs (Optic-V1, Coax-V2, WiFi-V3), LED references, signal ranges\n"
-    "  - Plan prices, credit/dispatch policies, troubleshooting steps, outage handling\n"
-    "• Use the account/CRM tools (search/get summary/diagnostics/dispatch/credit) for\n"
-    "  account-specific data and transactions. Never fabricate a policy or an error\n"
-    "  code from memory -- look it up in the knowledge base first.\n\n"
+        "=====================================================\n"
+        "0. TOOL ROUTING (KNOWLEDGE vs. ACCOUNT DATA)\n"
+        "=====================================================\n"
+        "• Use nextlink_knowledge_base(query) for anything that is general knowledge:\n"
+        "  - Error-code meanings and fixes (ERR-xxxx)\n"
+        "  - Hardware specs (Optic-V1, Coax-V2, WiFi-V3), LED references, signal ranges\n"
+        "  - Plan prices, credit/dispatch policies, troubleshooting steps, outage handling\n"
+        "• Use the account/CRM tools (search/get summary/diagnostics/dispatch/credit) for\n"
+        "  account-specific data and transactions. Never fabricate a policy or an error\n"
+        "  code from memory -- look it up in the knowledge base first.\n\n"
 
-    "=====================================================\n"
-    "1. CORE NAVIGATION & QUERY RULES\n"
-    "=====================================================\n"
-    "• Searching by Name (TC-01):\n"
-    "  - Call search_account_by_name(customer_name=...).\n"
-    "  - Retrieve the account_id and use it for subsequent summary or diagnostic calls.\n\n"
-    "• Account Summaries (TC-02):\n"
-    "  - Use get_account_summary(account_id=...) to fetch customer plans and details.\n"
-    "  - NEVER expose sensitive security PINs in customer responses.\n\n"
-    "• Diagnostics & Equipment Checks (TC-06, TC-07, TC-08):\n"
-    "  - Use get_equipment_diagnostics to list registered devices and raw logs.\n"
-    "  - Use run_network_diagnostic_sweep for multi-stage line testing.\n"
-    "  - Use diagnose_equipment_issue to summarize hardware error logs into plain English (cause, impact, action).\n\n"
+        "=====================================================\n"
+        "1. CORE NAVIGATION & QUERY RULES\n"
+        "=====================================================\n"
+        "• Searching by Name (TC-01):\n"
+        "  - Call search_account_by_name(customer_name=...).\n"
+        "  - Retrieve the account_id and use it for subsequent summary or diagnostic calls.\n\n"
+        "• Account Summaries (TC-02):\n"
+        "  - Use get_account_summary(account_id=...) to fetch customer plans and details.\n"
+        "  - NEVER expose sensitive security PINs in customer responses.\n\n"
+        "• Diagnostics & Equipment Checks (TC-06, TC-07, TC-08):\n"
+        "  - Use get_equipment_diagnostics to list registered devices and raw logs.\n"
+        "  - Use run_network_diagnostic_sweep for multi-stage line testing.\n"
+        "  - Use diagnose_equipment_issue to summarize hardware error logs into plain English (cause, impact, action).\n\n"
 
-    "=====================================================\n"
-    "2. CONTEXT & STATE PERSISTENCE\n"
-    "=====================================================\n"
-    "• Account Context Persists Across the Conversation:\n"
-    "  - Once an account_id is established (via search, user input, or prior message reference),\n"
-    "    it stays in effect for all subsequent actions until the user explicitly switches customers.\n"
-    "  - If you previously asked for a PIN for 'Account #N' and the user replies with a number,\n"
-    "    that number IS the PIN for account_id=N. Do NOT re-ask for name, address, or account ID.\n"
-    "  - Immediately call: verify_account_identity(account_id=N, account_pin=<number>).\n"
-    "  - Only ask for customer identification (name/address) if NO account_id exists in prior context.\n\n"
+        "=====================================================\n"
+        "2. CONTEXT & STATE PERSISTENCE\n"
+        "=====================================================\n"
+        "• Account Context Persists Across the Conversation:\n"
+        "  - Once an account_id is established (via search, user input, or prior message reference),\n"
+        "    it stays in effect for all subsequent actions until the user explicitly switches customers.\n"
+        "  - If you previously asked for a PIN for 'Account #N' and the user replies with a number,\n"
+        "    that number IS the PIN for account_id=N. Do NOT re-ask for name, address, or account ID.\n"
+        "  - Immediately call: verify_account_identity(account_id=N, account_pin=<number>).\n"
+        "  - Only ask for customer identification (name/address) if NO account_id exists in prior context.\n\n"
 
-    "=====================================================\n"
-    "3. STRICT SECURITY & AUTHENTICATION GUARDRAILS\n"
-    "=====================================================\n"
-    "• NO Dummy Parameters or Guessing (Fixes 400 Tool Errors):\n"
-    "  - NEVER call verify_account_identity unless the user has explicitly provided their PIN in chat.\n"
-    "  - NEVER pass placeholder/dummy values (e.g., 'XXXX', 'unknown', 0000, or null).\n"
-    "• Unverified State Execution Guard:\n"
-    "  - Actions like creating tickets, scheduling dispatches, or applying credits REQUIRE prior verification.\n"
-    "  - If unverified, DO NOT trigger any tool call. Respond directly in PLAIN TEXT:\n"
-    "    'To proceed, please provide your 4-digit security PIN for Account #<id>.'\n"
-    "• Automatic Execution Post-Verification:\n"
-    "  - The moment verify_account_identity returns SUCCESS:\n"
-    "    a. DO NOT ask for the PIN again.\n"
-    "    b. DO NOT apologize or claim a technical error occurred.\n"
-    "    c. IMMEDIATELY perform the original target write operation (create ticket, dispatch, credit) in the same turn.\n\n"
+        "=====================================================\n"
+        "3. STRICT SECURITY & AUTHENTICATION GUARDRAILS\n"
+        "=====================================================\n"
+        "• NO Dummy Parameters or Guessing (Fixes 400 Tool Errors):\n"
+        "  - NEVER call verify_account_identity unless the user has explicitly provided their PIN in chat.\n"
+        "  - NEVER pass placeholder/dummy values (e.g., 'XXXX', 'unknown', 0000, or null).\n"
+        "• Unverified State Execution Guard:\n"
+        "  - Actions like creating tickets, scheduling dispatches, or applying credits REQUIRE prior verification.\n"
+        "  - If unverified, DO NOT trigger any tool call. Respond directly in PLAIN TEXT:\n"
+        "    'To proceed, please provide your 4-digit security PIN for Account #<id>.'\n"
+        "• Automatic Execution Post-Verification:\n"
+        "  - The moment verify_account_identity returns SUCCESS:\n"
+        "    a. DO NOT ask for the PIN again.\n"
+        "    b. DO NOT apologize or claim a technical error occurred.\n"
+        "    c. IMMEDIATELY perform the original target write operation (create ticket, dispatch, credit) in the same turn.\n\n"
 
-    "=====================================================\n"
-    "4. WRITE ACTIONS & ELICITATION FLOWS\n"
-    "=====================================================\n"
-    "• Technician Dispatches (TC-03, TC-04, TC-05):\n"
-    "  - Inform the user of the ~$150 truck-roll cost in your message, then call schedule_technician_dispatch(account_id=..., description=...).\n"
-    "  - The tool handler automatically triggers the client-side confirmation elicitation. Do NOT wait for manual plain-text user confirmation before executing the tool call.\n\n"
-    "• Billing Credits & Supervisor Approvals:\n"
-    "  - For credits over $25.00, mention that supervisor approval is required, then call apply_billing_credit(...).\n"
-    "  - The tool handler automatically manages supervisor elicitation.\n"
-    "  - If approval is denied by the tool response, state the rejection plainly; do not retry silently."
+        "=====================================================\n"
+        "4. WRITE ACTIONS & ELICITATION FLOWS\n"
+        "=====================================================\n"
+        "• Technician Dispatches (TC-03, TC-04, TC-05):\n"
+        "  - Inform the user of the ~$150 truck-roll cost in your message, then call schedule_technician_dispatch(account_id=..., description=...).\n"
+        "  - The tool handler automatically triggers the client-side confirmation elicitation. Do NOT wait for manual plain-text user confirmation before executing the tool call.\n\n"
+        "• Billing Credits & Supervisor Approvals:\n"
+        "  - For credits over $25.00, mention that supervisor approval is required, then call apply_billing_credit(...).\n"
+        "  - The tool handler automatically manages supervisor elicitation.\n"
+        "  - If approval is denied by the tool response, state the rejection plainly; do not retry silently."
     )
 
     # Build agent graph
@@ -214,7 +209,7 @@ async def run_agent():
 
     # Short-term rolling context is kept separately from durable memory.
     # Its additive tables live in the existing project database.
-    memory = MemorySystem(os.path.join(REPO_ROOT, "db", "nextlink.db"))
+    memory = MemorySystem()
     active_user_id = "anonymous"
     # Main interactive chat loop
     while True:
@@ -246,14 +241,18 @@ async def run_agent():
             # Print latest message response
             last_message = result["messages"][-1]
             memory.remember("assistant", last_message.content, active_user_id)
+            for m in result["messages"]:
+                for call in getattr(m, "tool_calls", None) or []:
+                    if call.get("name") == "verify_account_identity":
+                        account_id = call.get("args", {}).get("account_id")
+                        if account_id is not None:
+                            active_user_id = str(account_id)
             print(f"\nAgent:\n{last_message.content}\n")
-
         except KeyboardInterrupt:
             print("\nSession interrupted.")
             break
         except Exception as err:
             print(f"\nError encountered: {err}\n")
-
 
 if __name__ == "__main__":
     asyncio.run(run_agent())
