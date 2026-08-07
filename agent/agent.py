@@ -63,31 +63,6 @@ async def run_agent():
     # agent had NO tools at all and was just improvising plausible-sounding
     # replies -- explaining symptoms like "forgetting" an account_id it had
     # never actually looked up via a real tool call.
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    candidate_paths = [
-        os.path.join(script_dir, "server.py"),
-        os.path.abspath(os.path.join(script_dir, "..", "mcp_server", "server.py")),
-    ]
-    server_script = next((p for p in candidate_paths if os.path.isfile(p)), None)
-    if server_script is None:
-        print(
-            "Could not find server.py. Looked in:\n  - "
-            + "\n  - ".join(candidate_paths)
-        )
-        return
-
-    print("Connecting to local MCP server...")
-    
-    # Establish connection via stdio transport
-    mcp_client = MultiServerMCPClient(
-        {
-            "nextlink": {
-                "transport": "stdio",
-                "command": "python",
-                "args": [server_script]
-            }
-        }
-    )
 
     # Fetch available tools dynamically from server
     tools = await mcp_client.get_tools()
@@ -164,7 +139,7 @@ async def run_agent():
 
     # Short-term rolling context is kept separately from durable memory.
     # Its additive tables live in the existing project database.
-    memory = MemorySystem(os.path.join(REPO_ROOT, "db", "nextlink.db"))
+    memory = MemorySystem()
     active_user_id = "anonymous"
     # Main interactive chat loop
     while True:
@@ -196,14 +171,18 @@ async def run_agent():
             # Print latest message response
             last_message = result["messages"][-1]
             memory.remember("assistant", last_message.content, active_user_id)
+            for m in result["messages"]:
+                for call in getattr(m, "tool_calls", None) or []:
+                    if call.get("name") == "verify_account_identity":
+                        account_id = call.get("args", {}).get("account_id")
+                        if account_id is not None:
+                            active_user_id = str(account_id)
             print(f"\nAgent:\n{last_message.content}\n")
-
         except KeyboardInterrupt:
             print("\nSession interrupted.")
             break
         except Exception as err:
             print(f"\nError encountered: {err}\n")
-
 
 if __name__ == "__main__":
     asyncio.run(run_agent())
