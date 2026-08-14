@@ -1,5 +1,23 @@
 # Task Decomposition & Planning Lab (Mistral)
 
+> **Status of this fork (Week 4 adaptations).** The upstream lab is kept for
+> credit and reference. For the Nexlink project the team replaces the Mistral
+> demo modules with Groq-compatible adaptations that call the real
+> `MCPToolExecutor` / DB / auth gate:
+> - `algorithms/plan_and_solve.py`, `algorithms/tree_of_thoughts.py`,
+>   `algorithms/lats.py` — adapted for Nexlink sub-tasks (plain `llm.invoke`,
+>   no `with_structured_output`, so `ChatGroq` works).
+> - `algorithms/lats_ungrounded.py` — added as the no-environment control.
+> - `algorithms/environment.py` — adds `NexlinkEnvironment` (keyword evaluator)
+>   and `GroundedEnvironment`, which executes a proposal's write through the
+>   real MCP handlers (DB + auth gate); the original randomized `Environment`
+>   stays as the ungrounded control.
+> - `decomposition.py`, `dynamic_decomposition.py`, `self_refine.py`,
+>   `reflexion.py` remain the fork's originals.
+> - `cli.py` is the fork's Mistral demo; the repo's Groq entry points are
+>   `planning/evaluate_planning.py`, `planning/lats_demo.py` and
+>   `planning/tests/`.
+
 This executable lab turns the Week 4 concepts into a compact agent pipeline:
 
 - **Decomposition-first:** Mistral produces a structured task DAG.

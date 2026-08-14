@@ -2,11 +2,15 @@ import os
 import sys
 import time
 
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+
 from dotenv import load_dotenv
 from langchain_groq import ChatGroq
 
-from context_evaluation.algorithms.lats import lats
-from context_evaluation.algorithms.environment import NexlinkEnvironment
+from planning.algorithms.planning_lab.algorithms.environment import NexlinkEnvironment
+from planning.algorithms.planning_lab.algorithms.lats import lats
 
 load_dotenv()
 

@@ -75,9 +75,31 @@ verify_account_identity -> schedule_technician_dispatch (SUCCESS)`.
 
 ## Scope for the other owners
 
-- **Person 2** — planning algorithms: `plan_and_solve.py`, `tree_of_thoughts.py`,
-  `lats.py` are forked verbatim under `algorithms/planning_lab/algorithms/`;
-  the routing decision will live next to the executor.
-- **Person 3** — self-correction + grounding: `self_refine.py`, `reflexion.py`,
-  `environment.py` are forked verbatim; the randomized `Environment` default in
-  `environment.py` must be replaced with a real feedback source.
+Three people, each writing real code (GitHub issues + linked PRs, one owner
+each). Person 1 owns this document; the sections below track the merge state.
+
+### Person 2 — planning algorithms + routing (done)
+
+Merged into `planning/` and reviewed; see `algorithms/README.upstream.md` for
+the fork-status of each module. Delivered:
+
+| Concern | Where | What it does |
+| --- | --- | --- |
+| Plan-and-Solve | `algorithms/planning_lab/algorithms/plan_and_solve.py` | Explicit plan phase, then solution phase (Groq-compatible `llm.invoke`) |
+| Tree-of-Thoughts | `algorithms/planning_lab/algorithms/tree_of_thoughts.py` | Generate/evaluate beam search; parse failures no longer silently swallowed |
+| LATS (grounded) | `algorithms/planning_lab/algorithms/lats.py` | MCTS with environment feedback + model self-score (`_estimate_value`), 0.75/0.25 backprop |
+| LATS (ungrounded control) | `algorithms/planning_lab/algorithms/lats_ungrounded.py` | Same loop, model self-score as pseudo-feedback, no environment |
+| Real feedback | `algorithms/planning_lab/algorithms/environment.py` (`GroundedEnvironment`) | Executes the proposal's write through the real MCP executor + auth gate; correct write = 1.0, correct decision failed write = 0.5, wrong executed write = 0.3, wrong failed = 0.1 |
+| Routing | `routing.py` (`route_subtask`) | Linear sub-tasks → Plan-and-Solve; external-validation sub-tasks → LATS; else ToT; defaults to Plan-and-Solve |
+| Cost accounting | `cost.py` (`TrackingLLM`) | Tracks calls + input/output chars, `estimate_cost` against Groq pricing |
+| Evaluation | `evaluate_planning.py` + `planning_test_cases.py` | Generic keyword cases + real scenario bundles (grounded); records routing, tokens, cost, latency; saves `artifacts/run-*.json`; offline fallback when no `GROQ_API_KEY` |
+| Tests | `tests/test_{plan_and_solve,tree_of_thoughts,lats,grounded_environment,routing}.py` | Deterministic offline via `ScriptedLLM` + temp DB |
+
+### Person 3 — self-correction + grounding + final evidence
+
+- Adapt `self_refine.py` and `reflexion.py` to the real sub-task types
+  (`deterministic_checks`/`reflect_and_refine` and `reflexion` are currently
+  the fork originals).
+- Replace the remaining keyword-scored generic cases with the full grounded
+  comparison table (all methods on all scenario bundles), a demo transcript,
+  and live agent wiring in `agent/agent.py`.

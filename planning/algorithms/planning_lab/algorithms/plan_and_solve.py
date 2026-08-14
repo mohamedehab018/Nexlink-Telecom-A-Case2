@@ -1,14 +1,38 @@
 from langchain_core.language_models.chat_models import BaseChatModel
 
+def plan_and_solve(task: str, llm: BaseChatModel) -> str:
+    plan_response = llm.invoke([
+        ("system", "You are a Nexlink technical support planning assistant."),
+        ("human", f"""
+Task: {task}
 
-def plan_and_solve(question: str, llm: BaseChatModel) -> str:
-    response = llm.invoke([
-        ("system", "You use Plan-and-Solve prompting. Clearly separate PLAN from SOLUTION."),
-        ("human", f"""{question}
+Create a practical diagnostic and troubleshooting plan for Nexlink support.
 
-First understand the problem and devise a plan to solve it. Then carry out the
-plan step by step. Check calculations and common-sense assumptions."""),
-    ], temperature=0.2)
-    if not isinstance(response.content, str) or not response.content.strip():
-        raise RuntimeError("The chat model returned an empty or unsupported response")
-    return response.content.strip()
+The plan MUST include:
+1. Problem identification
+2. Customer/account verification
+3. Service status checks
+4. Diagnostic steps with "diagnose"
+5. Troubleshooting steps with "troubleshooting"
+6. Possible causes and corrective actions
+7. Equipment checks (modem, router, cables)
+8. Escalation path with "technician" and "dispatch"
+""")
+    ])
+    plan = getattr(plan_response, "content", "")
+
+    solution_response = llm.invoke([
+        ("system", "You are a Nexlink support assistant."),
+        ("human", f"""
+Task: {task}
+
+Planning notes:
+{plan}
+
+Provide a complete practical solution.
+
+Include the words: diagnose, troubleshooting, technician, dispatch
+""")
+    ])
+    solution = getattr(solution_response, "content", "")
+    return solution.strip()

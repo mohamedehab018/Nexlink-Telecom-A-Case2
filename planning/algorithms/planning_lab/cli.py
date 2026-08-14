@@ -99,7 +99,10 @@ def main() -> None:
     elif args.mode == "tot":
         thoughts = tree_of_thoughts(args.goal, llm, args.depth, args.beam_width)
         result = thoughts[0].state if thoughts else "No viable thought survived."
-        payload.update(thoughts=[thought.model_dump() for thought in thoughts], result=result)
+        payload.update(
+            thoughts=[{"state": thought.state, "score": thought.score} for thought in thoughts],
+            result=result,
+        )
     elif args.mode == "reflexion":
         environment = Environment(success_threshold=args.success_threshold)
         outcome = reflexion(args.goal, llm, environment, args.max_trials, args.memory_size)
