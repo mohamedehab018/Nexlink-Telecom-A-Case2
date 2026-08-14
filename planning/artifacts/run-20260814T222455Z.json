@@ -1,0 +1,800 @@
+{
+  "model": "llama-3.1-8b-instant",
+  "runs": [
+    {
+      "family": "generic",
+      "case": "Internet outage",
+      "results": {
+        "PS": {
+          "algorithm": "PS",
+          "success": true,
+          "score": 0.875,
+          "latency": 0.0,
+          "output": "Diagnose the A customer reports that their internet connection is completely down. Explain the steps a support agent should take to diagnose the problem and decide whether a technician is needed. issu...",
+          "details": "Score: 0.88\nAll validations passed",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        },
+        "ToT": {
+          "algorithm": "?",
+          "success": false,
+          "score": 0.0,
+          "latency": 0.0,
+          "output": "",
+          "details": "ToT needs an LLM",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        },
+        "Grounded LATS": {
+          "algorithm": "Grounded LATS",
+          "success": true,
+          "score": 0.875,
+          "latency": 0.0,
+          "output": "Diagnose the A customer reports that their internet connection is completely down. Explain the steps a support agent should take to diagnose the problem and decide whether a technician is needed. issu...",
+          "details": "Score: 0.88\nAll validations passed",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        },
+        "Ungrounded LATS": {
+          "algorithm": "Ungrounded LATS",
+          "success": true,
+          "score": 0.75,
+          "latency": 0.0,
+          "output": "Diagnose the A customer reports that their internet connection is completely down. Explain the steps a support agent should take to diagnose the problem and decide whether a technician is needed. issu...",
+          "details": "Score: 0.75\nAll validations passed",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        }
+      }
+    },
+    {
+      "family": "generic",
+      "case": "Slow connection",
+      "results": {
+        "PS": {
+          "algorithm": "PS",
+          "success": true,
+          "score": 0.8333333333333333,
+          "latency": 0.0,
+          "output": "Diagnose the A customer says their internet becomes very slow every evening. Create a step-by-step troubleshooting plan to identify the cause and resolve the issue. issue. Troubleshoot it and check eq...",
+          "details": "Score: 0.83\nAll validations passed",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        },
+        "ToT": {
+          "algorithm": "?",
+          "success": false,
+          "score": 0.0,
+          "latency": 0.0,
+          "output": "",
+          "details": "ToT needs an LLM",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        },
+        "Grounded LATS": {
+          "algorithm": "Grounded LATS",
+          "success": true,
+          "score": 0.8333333333333333,
+          "latency": 0.0,
+          "output": "Diagnose the A customer says their internet becomes very slow every evening. Create a step-by-step troubleshooting plan to identify the cause and resolve the issue. issue. Troubleshoot and dispatch a ...",
+          "details": "Score: 0.83\nAll validations passed",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        },
+        "Ungrounded LATS": {
+          "algorithm": "Ungrounded LATS",
+          "success": false,
+          "score": 0.5833333333333333,
+          "latency": 0.0,
+          "output": "Diagnose the A customer says their internet becomes very slow every evening. Create a step-by-step troubleshooting plan to identify the cause and resolve the issue. issue. Troubleshoot the problem.",
+          "details": "Score: 0.58\nMissing: ['speed']",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        }
+      }
+    },
+    {
+      "family": "generic",
+      "case": "Router restart",
+      "results": {
+        "PS": {
+          "algorithm": "PS",
+          "success": true,
+          "score": 0.875,
+          "latency": 0.0,
+          "output": "Diagnose the A customer's router keeps restarting randomly. Develop a plan to investigate the problem, check the equipment, and determine the appropriate next action. issue. Troubleshoot it and check ...",
+          "details": "Score: 0.88\nAll validations passed",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        },
+        "ToT": {
+          "algorithm": "?",
+          "success": false,
+          "score": 0.0,
+          "latency": 0.0,
+          "output": "",
+          "details": "ToT needs an LLM",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        },
+        "Grounded LATS": {
+          "algorithm": "Grounded LATS",
+          "success": true,
+          "score": 0.875,
+          "latency": 0.0,
+          "output": "Diagnose the A customer's router keeps restarting randomly. Develop a plan to investigate the problem, check the equipment, and determine the appropriate next action. issue. Troubleshoot and dispatch ...",
+          "details": "Score: 0.88\nAll validations passed",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        },
+        "Ungrounded LATS": {
+          "algorithm": "Ungrounded LATS",
+          "success": false,
+          "score": 0.625,
+          "latency": 0.0,
+          "output": "Diagnose the A customer's router keeps restarting randomly. Develop a plan to investigate the problem, check the equipment, and determine the appropriate next action. issue. Troubleshoot the problem.",
+          "details": "Score: 0.62\nMissing: ['required terms missing']",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        }
+      }
+    },
+    {
+      "family": "generic",
+      "case": "Red modem light",
+      "results": {
+        "PS": {
+          "algorithm": "PS",
+          "success": true,
+          "score": 0.875,
+          "latency": 0.0,
+          "output": "Diagnose the A customer reports that the modem has a red status light and there is no internet connection. Provide a structured plan for diagnosing and resolving the issue. issue. Troubleshoot it and ...",
+          "details": "Score: 0.88\nAll validations passed",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        },
+        "ToT": {
+          "algorithm": "?",
+          "success": false,
+          "score": 0.0,
+          "latency": 0.0,
+          "output": "",
+          "details": "ToT needs an LLM",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        },
+        "Grounded LATS": {
+          "algorithm": "Grounded LATS",
+          "success": true,
+          "score": 0.875,
+          "latency": 0.0,
+          "output": "Diagnose the A customer reports that the modem has a red status light and there is no internet connection. Provide a structured plan for diagnosing and resolving the issue. issue. Troubleshoot and dis...",
+          "details": "Score: 0.88\nAll validations passed",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        },
+        "Ungrounded LATS": {
+          "algorithm": "Ungrounded LATS",
+          "success": false,
+          "score": 0.625,
+          "latency": 0.0,
+          "output": "Diagnose the A customer reports that the modem has a red status light and there is no internet connection. Provide a structured plan for diagnosing and resolving the issue. issue. Troubleshoot the pro...",
+          "details": "Score: 0.62\nMissing: ['required terms missing']",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        }
+      }
+    },
+    {
+      "family": "generic",
+      "case": "WiFi authentication",
+      "results": {
+        "PS": {
+          "algorithm": "PS",
+          "success": true,
+          "score": 1.0,
+          "latency": 0.0,
+          "output": "Diagnose the A customer changed their WiFi password and can no longer connect. Create a troubleshooting plan that identifies the likely cause and explains the steps to restore connectivity. issue. Tro...",
+          "details": "Score: 1.00\nAll validations passed",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        },
+        "ToT": {
+          "algorithm": "?",
+          "success": false,
+          "score": 0.0,
+          "latency": 0.0,
+          "output": "",
+          "details": "ToT needs an LLM",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        },
+        "Grounded LATS": {
+          "algorithm": "Grounded LATS",
+          "success": true,
+          "score": 1.0,
+          "latency": 0.0,
+          "output": "Diagnose the A customer changed their WiFi password and can no longer connect. Create a troubleshooting plan that identifies the likely cause and explains the steps to restore connectivity. issue. Tro...",
+          "details": "Score: 1.00\nAll validations passed",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        },
+        "Ungrounded LATS": {
+          "algorithm": "Ungrounded LATS",
+          "success": true,
+          "score": 0.75,
+          "latency": 0.0,
+          "output": "Diagnose the A customer changed their WiFi password and can no longer connect. Create a troubleshooting plan that identifies the likely cause and explains the steps to restore connectivity. issue. Tro...",
+          "details": "Score: 0.75\nAll validations passed",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        }
+      }
+    },
+    {
+      "family": "generic",
+      "case": "Billing problem",
+      "results": {
+        "PS": {
+          "algorithm": "PS",
+          "success": false,
+          "score": 0.5416666666666666,
+          "latency": 0.0,
+          "output": "Diagnose the A customer claims they were charged twice for their monthly internet subscription. Create a plan to investigate the billing records and determine the correct action. issue. Troubleshoot i...",
+          "details": "Score: 0.54\nMissing: ['charges', 'account']",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        },
+        "ToT": {
+          "algorithm": "?",
+          "success": false,
+          "score": 0.0,
+          "latency": 0.0,
+          "output": "",
+          "details": "ToT needs an LLM",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        },
+        "Grounded LATS": {
+          "algorithm": "Grounded LATS",
+          "success": false,
+          "score": 0.5416666666666666,
+          "latency": 0.0,
+          "output": "Diagnose the A customer claims they were charged twice for their monthly internet subscription. Create a plan to investigate the billing records and determine the correct action. issue. Troubleshoot a...",
+          "details": "Score: 0.54\nMissing: ['charges', 'account']",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        },
+        "Ungrounded LATS": {
+          "algorithm": "Ungrounded LATS",
+          "success": false,
+          "score": 0.29166666666666663,
+          "latency": 0.0,
+          "output": "Diagnose the A customer claims they were charged twice for their monthly internet subscription. Create a plan to investigate the billing records and determine the correct action. issue. Troubleshoot t...",
+          "details": "Score: 0.29\nMissing: ['charges', 'account']",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        }
+      }
+    },
+    {
+      "family": "generic",
+      "case": "Plan upgrade",
+      "results": {
+        "PS": {
+          "algorithm": "PS",
+          "success": false,
+          "score": 0.5416666666666666,
+          "latency": 0.0,
+          "output": "Diagnose the A customer wants to change their current internet package to a faster plan. Explain the steps an agent should follow. issue. Troubleshoot it and check equipment. Dispatch a technician if ...",
+          "details": "Score: 0.54\nMissing: ['account', 'upgrade']",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        },
+        "ToT": {
+          "algorithm": "?",
+          "success": false,
+          "score": 0.0,
+          "latency": 0.0,
+          "output": "",
+          "details": "ToT needs an LLM",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        },
+        "Grounded LATS": {
+          "algorithm": "Grounded LATS",
+          "success": false,
+          "score": 0.5416666666666666,
+          "latency": 0.0,
+          "output": "Diagnose the A customer wants to change their current internet package to a faster plan. Explain the steps an agent should follow. issue. Troubleshoot and dispatch a technician if needed.",
+          "details": "Score: 0.54\nMissing: ['account', 'upgrade']",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        },
+        "Ungrounded LATS": {
+          "algorithm": "Ungrounded LATS",
+          "success": false,
+          "score": 0.29166666666666663,
+          "latency": 0.0,
+          "output": "Diagnose the A customer wants to change their current internet package to a faster plan. Explain the steps an agent should follow. issue. Troubleshoot the problem.",
+          "details": "Score: 0.29\nMissing: ['account', 'upgrade']",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        }
+      }
+    },
+    {
+      "family": "generic",
+      "case": "Multiple devices",
+      "results": {
+        "PS": {
+          "algorithm": "PS",
+          "success": true,
+          "score": 0.875,
+          "latency": 0.0,
+          "output": "Diagnose the A customer's connection becomes unstable whenever many devices are connected. Develop a diagnostic plan to identify the cause and recommend a solution. issue. Troubleshoot it and check eq...",
+          "details": "Score: 0.88\nAll validations passed",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        },
+        "ToT": {
+          "algorithm": "?",
+          "success": false,
+          "score": 0.0,
+          "latency": 0.0,
+          "output": "",
+          "details": "ToT needs an LLM",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        },
+        "Grounded LATS": {
+          "algorithm": "Grounded LATS",
+          "success": true,
+          "score": 0.875,
+          "latency": 0.0,
+          "output": "Diagnose the A customer's connection becomes unstable whenever many devices are connected. Develop a diagnostic plan to identify the cause and recommend a solution. issue. Troubleshoot and dispatch a ...",
+          "details": "Score: 0.88\nAll validations passed",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        },
+        "Ungrounded LATS": {
+          "algorithm": "Ungrounded LATS",
+          "success": false,
+          "score": 0.625,
+          "latency": 0.0,
+          "output": "Diagnose the A customer's connection becomes unstable whenever many devices are connected. Develop a diagnostic plan to identify the cause and recommend a solution. issue. Troubleshoot the problem.",
+          "details": "Score: 0.62\nMissing: ['required terms missing']",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        }
+      }
+    },
+    {
+      "family": "generic",
+      "case": "Package expiration",
+      "results": {
+        "PS": {
+          "algorithm": "PS",
+          "success": false,
+          "score": 0.5416666666666666,
+          "latency": 0.0,
+          "output": "Diagnose the A customer says their internet package expired earlier than expected. Create a plan to investigate the subscription and determine what happened. issue. Troubleshoot it and check equipment...",
+          "details": "Score: 0.54\nMissing: ['account', 'expiration']",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        },
+        "ToT": {
+          "algorithm": "?",
+          "success": false,
+          "score": 0.0,
+          "latency": 0.0,
+          "output": "",
+          "details": "ToT needs an LLM",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        },
+        "Grounded LATS": {
+          "algorithm": "Grounded LATS",
+          "success": false,
+          "score": 0.5416666666666666,
+          "latency": 0.0,
+          "output": "Diagnose the A customer says their internet package expired earlier than expected. Create a plan to investigate the subscription and determine what happened. issue. Troubleshoot and dispatch a technic...",
+          "details": "Score: 0.54\nMissing: ['account', 'expiration']",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        },
+        "Ungrounded LATS": {
+          "algorithm": "Ungrounded LATS",
+          "success": false,
+          "score": 0.29166666666666663,
+          "latency": 0.0,
+          "output": "Diagnose the A customer says their internet package expired earlier than expected. Create a plan to investigate the subscription and determine what happened. issue. Troubleshoot the problem.",
+          "details": "Score: 0.29\nMissing: ['account', 'expiration']",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        }
+      }
+    },
+    {
+      "family": "generic",
+      "case": "Technician dispatch",
+      "results": {
+        "PS": {
+          "algorithm": "PS",
+          "success": true,
+          "score": 1.0,
+          "latency": 0.0,
+          "output": "Diagnose the A customer has repeated connection failures and troubleshooting did not solve the issue. Create a plan that determines when a technician should be dispatched. issue. Troubleshoot it and c...",
+          "details": "Score: 1.00\nAll validations passed",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        },
+        "ToT": {
+          "algorithm": "?",
+          "success": false,
+          "score": 0.0,
+          "latency": 0.0,
+          "output": "",
+          "details": "ToT needs an LLM",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        },
+        "Grounded LATS": {
+          "algorithm": "Grounded LATS",
+          "success": true,
+          "score": 1.0,
+          "latency": 0.0,
+          "output": "Diagnose the A customer has repeated connection failures and troubleshooting did not solve the issue. Create a plan that determines when a technician should be dispatched. issue. Troubleshoot and disp...",
+          "details": "Score: 1.00\nAll validations passed",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        },
+        "Ungrounded LATS": {
+          "algorithm": "Ungrounded LATS",
+          "success": true,
+          "score": 1.0,
+          "latency": 0.0,
+          "output": "Diagnose the A customer has repeated connection failures and troubleshooting did not solve the issue. Create a plan that determines when a technician should be dispatched. issue. Troubleshoot the prob...",
+          "details": "Score: 1.00\nAll validations passed",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        }
+      }
+    },
+    {
+      "family": "scenario",
+      "case": "Outage bundle - Walter White (no dispatch)",
+      "expected_resolution": "no_dispatch_required",
+      "shape": {
+        "requires_branching": false,
+        "requires_lookahead": false,
+        "requires_external_validation": false,
+        "mostly_deterministic": true
+      },
+      "routing": {
+        "case": "Outage bundle - Walter White (no dispatch)",
+        "method": "PLAN_AND_SOLVE",
+        "reason": "Sub-task is linear; Plan-and-Solve avoids unnecessary search.",
+        "routed_success": true
+      },
+      "results": {
+        "PS": {
+          "algorithm": "PS",
+          "success": true,
+          "score": 1.0,
+          "latency": 0.0459,
+          "output": "No dispatch needed; resolve remotely.",
+          "details": "decision=no_dispatch_required\nexpected=no_dispatch_required\nNO WRITE EXECUTED: decision is no dispatch / remote fix.\nwrites_in_call_log=0",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        },
+        "ToT": {
+          "algorithm": "ToT",
+          "success": true,
+          "score": 1.0,
+          "latency": 0.0404,
+          "output": "No dispatch needed; resolve remotely.",
+          "details": "decision=no_dispatch_required\nexpected=no_dispatch_required\nNO WRITE EXECUTED: decision is no dispatch / remote fix.\nwrites_in_call_log=0",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        },
+        "Grounded LATS": {
+          "algorithm": "Grounded LATS",
+          "success": true,
+          "score": 1.0,
+          "latency": 0.0388,
+          "output": "No dispatch needed; resolve remotely.",
+          "details": "decision=no_dispatch_required\nexpected=no_dispatch_required\nNO WRITE EXECUTED: decision is no dispatch / remote fix.\nwrites_in_call_log=0",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        },
+        "Ungrounded LATS": {
+          "algorithm": "Ungrounded LATS",
+          "success": true,
+          "score": 1.0,
+          "latency": 0.043,
+          "output": "No dispatch needed; resolve remotely.",
+          "details": "decision=no_dispatch_required\nexpected=no_dispatch_required\nNO WRITE EXECUTED: decision is no dispatch / remote fix.\nwrites_in_call_log=0",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        },
+        "PLAN_AND_SOLVE": {
+          "algorithm": "PS",
+          "success": true,
+          "score": 1.0,
+          "latency": 0.0455,
+          "output": "No dispatch needed; resolve remotely.",
+          "details": "decision=no_dispatch_required\nexpected=no_dispatch_required\nNO WRITE EXECUTED: decision is no dispatch / remote fix.\nwrites_in_call_log=0",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        },
+        "routing": {
+          "case": "Outage bundle - Walter White (no dispatch)",
+          "method": "PLAN_AND_SOLVE",
+          "reason": "Sub-task is linear; Plan-and-Solve avoids unnecessary search.",
+          "routed_success": true
+        }
+      }
+    },
+    {
+      "family": "scenario",
+      "case": "Faulty modem bundle - Ellen Ripley (dispatch)",
+      "expected_resolution": "dispatch_required",
+      "shape": {
+        "requires_branching": true,
+        "requires_lookahead": true,
+        "requires_external_validation": true,
+        "mostly_deterministic": false
+      },
+      "routing": {
+        "case": "Faulty modem bundle - Ellen Ripley (dispatch)",
+        "method": "LATS",
+        "reason": "Sub-task needs external validation; LATS uses environment feedback.",
+        "routed_success": true
+      },
+      "results": {
+        "PS": {
+          "algorithm": "PS",
+          "success": true,
+          "score": 1.0,
+          "latency": 0.0547,
+          "output": "Dispatch a technician to resolve the hardware fault.",
+          "details": "decision=dispatch_required\nexpected=dispatch_required\nVERIFICATION SUCCESSFUL: Session authorized for Account #3.\nSUCCESS: Technician dispatch scheduled for Account #3.\n  Ticket ID: #3\n  Address: LV-426 Nostromo Ave, Seattle\n  Status: OPEN\n  Description: Resolve incident.\nwrites_in_call_log=1",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        },
+        "ToT": {
+          "algorithm": "ToT",
+          "success": true,
+          "score": 1.0,
+          "latency": 0.0498,
+          "output": "Dispatch a technician to resolve the hardware fault.",
+          "details": "decision=dispatch_required\nexpected=dispatch_required\nVERIFICATION SUCCESSFUL: Session authorized for Account #3.\nSUCCESS: Technician dispatch scheduled for Account #3.\n  Ticket ID: #3\n  Address: LV-426 Nostromo Ave, Seattle\n  Status: OPEN\n  Description: Resolve incident.\nwrites_in_call_log=1",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        },
+        "Grounded LATS": {
+          "algorithm": "Grounded LATS",
+          "success": true,
+          "score": 1.0,
+          "latency": 0.0528,
+          "output": "Dispatch a technician to resolve the hardware fault.",
+          "details": "decision=dispatch_required\nexpected=dispatch_required\nVERIFICATION SUCCESSFUL: Session authorized for Account #3.\nSUCCESS: Technician dispatch scheduled for Account #3.\n  Ticket ID: #3\n  Address: LV-426 Nostromo Ave, Seattle\n  Status: OPEN\n  Description: Resolve incident.\nwrites_in_call_log=1",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        },
+        "Ungrounded LATS": {
+          "algorithm": "Ungrounded LATS",
+          "success": true,
+          "score": 1.0,
+          "latency": 0.0459,
+          "output": "Dispatch a technician to resolve the hardware fault.",
+          "details": "decision=dispatch_required\nexpected=dispatch_required\nVERIFICATION SUCCESSFUL: Session authorized for Account #3.\nSUCCESS: Technician dispatch scheduled for Account #3.\n  Ticket ID: #3\n  Address: LV-426 Nostromo Ave, Seattle\n  Status: OPEN\n  Description: Resolve incident.\nwrites_in_call_log=1",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        },
+        "LATS": {
+          "algorithm": "Grounded LATS",
+          "success": true,
+          "score": 1.0,
+          "latency": 0.051,
+          "output": "Dispatch a technician to resolve the hardware fault.",
+          "details": "decision=dispatch_required\nexpected=dispatch_required\nVERIFICATION SUCCESSFUL: Session authorized for Account #3.\nSUCCESS: Technician dispatch scheduled for Account #3.\n  Ticket ID: #3\n  Address: LV-426 Nostromo Ave, Seattle\n  Status: OPEN\n  Description: Resolve incident.\nwrites_in_call_log=1",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        },
+        "routing": {
+          "case": "Faulty modem bundle - Ellen Ripley (dispatch)",
+          "method": "LATS",
+          "reason": "Sub-task needs external validation; LATS uses environment feedback.",
+          "routed_success": true
+        }
+      }
+    },
+    {
+      "family": "scenario",
+      "case": "Billing bundle - Sarah Branden (credit)",
+      "expected_resolution": "credit_applied",
+      "shape": {
+        "requires_branching": false,
+        "requires_lookahead": false,
+        "requires_external_validation": true,
+        "mostly_deterministic": true
+      },
+      "routing": {
+        "case": "Billing bundle - Sarah Branden (credit)",
+        "method": "LATS",
+        "reason": "Sub-task needs external validation; LATS uses environment feedback.",
+        "routed_success": true
+      },
+      "results": {
+        "PS": {
+          "algorithm": "PS",
+          "success": true,
+          "score": 1.0,
+          "latency": 0.0609,
+          "output": "Apply the billing credit to the account.",
+          "details": "decision=credit_applied\nexpected=credit_applied\nVERIFICATION SUCCESSFUL: Session authorized for Account #1.\nSUCCESS: Applied $30.00 credit to Account #1 on Ticket #1 (Supervisor Approved).\nDescription: Customer called to verify first month payment received. [CREDIT APPLIED: $30.00]\nwrites_in_call_log=1",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        },
+        "ToT": {
+          "algorithm": "ToT",
+          "success": true,
+          "score": 1.0,
+          "latency": 0.0621,
+          "output": "Apply the billing credit to the account.",
+          "details": "decision=credit_applied\nexpected=credit_applied\nVERIFICATION SUCCESSFUL: Session authorized for Account #1.\nSUCCESS: Applied $30.00 credit to Account #1 on Ticket #1 (Supervisor Approved).\nDescription: Customer called to verify first month payment received. [CREDIT APPLIED: $30.00]\nwrites_in_call_log=1",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        },
+        "Grounded LATS": {
+          "algorithm": "Grounded LATS",
+          "success": true,
+          "score": 1.0,
+          "latency": 0.068,
+          "output": "Apply the billing credit to the account.",
+          "details": "decision=credit_applied\nexpected=credit_applied\nVERIFICATION SUCCESSFUL: Session authorized for Account #1.\nSUCCESS: Applied $30.00 credit to Account #1 on Ticket #1 (Supervisor Approved).\nDescription: Customer called to verify first month payment received. [CREDIT APPLIED: $30.00]\nwrites_in_call_log=1",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        },
+        "Ungrounded LATS": {
+          "algorithm": "Ungrounded LATS",
+          "success": true,
+          "score": 1.0,
+          "latency": 0.0614,
+          "output": "Apply the billing credit to the account.",
+          "details": "decision=credit_applied\nexpected=credit_applied\nVERIFICATION SUCCESSFUL: Session authorized for Account #1.\nSUCCESS: Applied $30.00 credit to Account #1 on Ticket #1 (Supervisor Approved).\nDescription: Customer called to verify first month payment received. [CREDIT APPLIED: $30.00]\nwrites_in_call_log=1",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        },
+        "LATS": {
+          "algorithm": "Grounded LATS",
+          "success": true,
+          "score": 1.0,
+          "latency": 0.0555,
+          "output": "Apply the billing credit to the account.",
+          "details": "decision=credit_applied\nexpected=credit_applied\nVERIFICATION SUCCESSFUL: Session authorized for Account #1.\nSUCCESS: Applied $30.00 credit to Account #1 on Ticket #1 (Supervisor Approved).\nDescription: Customer called to verify first month payment received. [CREDIT APPLIED: $30.00]\nwrites_in_call_log=1",
+          "calls": 0,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "est_cost_usd": 0.0
+        },
+        "routing": {
+          "case": "Billing bundle - Sarah Branden (credit)",
+          "method": "LATS",
+          "reason": "Sub-task needs external validation; LATS uses environment feedback.",
+          "routed_success": true
+        }
+      }
+    }
+  ]
+}
