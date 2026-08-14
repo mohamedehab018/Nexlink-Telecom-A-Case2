@@ -3,7 +3,7 @@
 Run as a quick smoke test while the planning package is being developed.
 """
 from planning.dag import build_example_dag
-from planning.decomposition import dynamic_decomposition
+from planning.decomposition import dynamic_decomposition, execute_dag, default_action_map
 
 
 def fake_executor(name: str, payload: dict):
@@ -30,6 +30,12 @@ def demo():
     results = dynamic_decomposition(fake_executor, "reshuffle Tuesday board")
     for name, res in results:
         print(f"Result for {name}: {res}")
+
+    print("\nRunning decomposition-first DAG execution using real action map:\n")
+    am = default_action_map()
+    dag_results = execute_dag(dag, am)
+    for node, res in dag_results.items():
+        print(f"DAG node {node}: {res}")
 
 
 if __name__ == "__main__":
