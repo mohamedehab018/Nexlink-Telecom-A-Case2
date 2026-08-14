@@ -1,5 +1,5 @@
 import os
-from . import db
+import db
 
 POLICY_PATH = os.path.join(os.path.dirname(__file__), "credit_policy.md")
 

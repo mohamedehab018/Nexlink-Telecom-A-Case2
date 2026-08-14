@@ -128,7 +128,7 @@ class QueryPlanner:
 class AgenticRAG(RAGArchitecture):
     """LangGraph multi-step retrieval loop."""
 
-    name = "Agentic RAG (LangGraph)" # type: ignore
+    name = "Agentic RAG (LangGraph)"
 
     def __init__(
         self,
@@ -231,12 +231,12 @@ class AgenticRAG(RAGArchitecture):
     def _build_graph(self):
         from langgraph.graph import END, START, StateGraph
 
-        graph = StateGraph(dict) # type: ignore
-        graph.add_node("decompose", self._node_decompose) # type: ignore
-        graph.add_node("retrieve", self._node_retrieve) # type: ignore
-        graph.add_node("grade", self._node_grade) # type: ignore
-        graph.add_node("rewrite", self._node_rewrite) # type: ignore
-        graph.add_node("generate", self._node_generate) # type: ignore
+        graph = StateGraph(dict)
+        graph.add_node("decompose", self._node_decompose)
+        graph.add_node("retrieve", self._node_retrieve)
+        graph.add_node("grade", self._node_grade)
+        graph.add_node("rewrite", self._node_rewrite)
+        graph.add_node("generate", self._node_generate)
         graph.add_edge(START, "decompose")
         graph.add_edge("decompose", "retrieve")
         graph.add_edge("retrieve", "grade")

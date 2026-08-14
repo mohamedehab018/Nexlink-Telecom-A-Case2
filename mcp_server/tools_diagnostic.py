@@ -2,8 +2,8 @@ import asyncio
 import logging
 from typing import Any, Dict, Optional
 
-from . import db
-from .schemas import validate_tool_input
+import db
+from schemas import validate_tool_input
 
 logger = logging.getLogger("nextlink_diagnostic")
 

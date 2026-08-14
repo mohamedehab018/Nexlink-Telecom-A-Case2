@@ -1,5 +1,5 @@
 from typing import Any, Dict, List
-from . import db
+import db
 
 
 def generate_draft_outage_explanation_messages(account_id: int, ticket_id: int) -> List[Dict[str, str]]:
