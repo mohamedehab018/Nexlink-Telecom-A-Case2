@@ -5,7 +5,7 @@ A wrong decision that still executes is a real $150 cost: it scores 0.3, not
 the environment's signal comes from executing the real MCP handlers.
 """
 
-from planning.algorithms.planning_lab.algorithms.environment import (
+from planning.planning_lab.algorithms.environment import (
     GroundedEnvironment,
     _extract_decision,
 )

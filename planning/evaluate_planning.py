@@ -30,14 +30,14 @@ if PROJECT_ROOT not in sys.path:
 from dotenv import load_dotenv
 from langchain_groq import ChatGroq
 
-from planning.algorithms.planning_lab.algorithms.environment import (
+from planning.planning_lab.algorithms.environment import (
     GroundedEnvironment,
     NexlinkEnvironment,
 )
-from planning.algorithms.planning_lab.algorithms.lats import flatten_lats_tree, lats
-from planning.algorithms.planning_lab.algorithms.lats_ungrounded import lats_ungrounded
-from planning.algorithms.planning_lab.algorithms.plan_and_solve import plan_and_solve
-from planning.algorithms.planning_lab.algorithms.tree_of_thoughts import tree_of_thoughts
+from planning.planning_lab.algorithms.lats import flatten_lats_tree, lats
+from planning.planning_lab.algorithms.lats_ungrounded import lats_ungrounded
+from planning.planning_lab.algorithms.plan_and_solve import plan_and_solve
+from planning.planning_lab.algorithms.tree_of_thoughts import tree_of_thoughts
 from planning.cost import TrackingLLM
 from planning.mcp_tools import MCPToolExecutor
 from planning.planning_test_cases import GENERIC_CASES, SCENARIO_CASES

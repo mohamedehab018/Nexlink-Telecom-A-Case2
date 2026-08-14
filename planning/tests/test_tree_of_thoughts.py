@@ -4,7 +4,7 @@ import pytest
 
 from conftest import ScriptedLLM
 
-from planning.algorithms.planning_lab.algorithms import ThoughtNode, tree_of_thoughts
+from planning.planning_lab.algorithms import ThoughtNode, tree_of_thoughts
 
 
 def _tot_llm():

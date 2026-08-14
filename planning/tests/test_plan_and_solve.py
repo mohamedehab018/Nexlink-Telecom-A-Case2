@@ -2,7 +2,7 @@
 
 from conftest import ScriptedLLM
 
-from planning.algorithms.planning_lab.algorithms import plan_and_solve
+from planning.planning_lab.algorithms import plan_and_solve
 
 
 def test_plan_and_solve_makes_exactly_two_calls():

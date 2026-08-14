@@ -2,7 +2,7 @@
 
 from conftest import ScriptedLLM
 
-from planning.algorithms.planning_lab.algorithms import (
+from planning.planning_lab.algorithms import (
     LATSResult,
     NexlinkEnvironment,
     flatten_lats_tree,

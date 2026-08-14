@@ -4,14 +4,15 @@
 > credit and reference. For the Nexlink project the team replaces the Mistral
 > demo modules with Groq-compatible adaptations that call the real
 > `MCPToolExecutor` / DB / auth gate:
-> - `algorithms/plan_and_solve.py`, `algorithms/tree_of_thoughts.py`,
->   `algorithms/lats.py` — adapted for Nexlink sub-tasks (plain `llm.invoke`,
->   no `with_structured_output`, so `ChatGroq` works).
-> - `algorithms/lats_ungrounded.py` — added as the no-environment control.
-> - `algorithms/environment.py` — adds `NexlinkEnvironment` (keyword evaluator)
->   and `GroundedEnvironment`, which executes a proposal's write through the
->   real MCP handlers (DB + auth gate); the original randomized `Environment`
->   stays as the ungrounded control.
+> - `planning_lab/algorithms/plan_and_solve.py`,
+>   `planning_lab/algorithms/tree_of_thoughts.py`,
+>   `planning_lab/algorithms/lats.py` — adapted for Nexlink sub-tasks (plain
+>   `llm.invoke`, no `with_structured_output`, so `ChatGroq` works).
+> - `planning_lab/algorithms/lats_ungrounded.py` — added as the no-environment control.
+> - `planning_lab/algorithms/environment.py` — adds `NexlinkEnvironment`
+>   (keyword evaluator) and `GroundedEnvironment`, which executes a proposal's
+>   write through the real MCP handlers (DB + auth gate); the original
+>   randomized `Environment` stays as the ungrounded control.
 > - `decomposition.py`, `dynamic_decomposition.py`, `self_refine.py`,
 >   `reflexion.py` remain the fork's originals.
 > - `cli.py` is the fork's Mistral demo; the repo's Groq entry points are

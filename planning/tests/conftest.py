@@ -11,8 +11,8 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from planning import MCPToolExecutor  # noqa: E402
-from planning.algorithms.planning_lab.algorithms.decomposition import GeneratedPlan  # noqa: E402
-from planning.algorithms.planning_lab.algorithms.dynamic_decomposition import DynamicDecision  # noqa: E402
+from planning.planning_lab.algorithms.decomposition import GeneratedPlan  # noqa: E402
+from planning.planning_lab.algorithms.dynamic_decomposition import DynamicDecision  # noqa: E402
 
 
 def build_temp_db(tmp_path: Path) -> str:

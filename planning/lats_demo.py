@@ -9,8 +9,8 @@ if PROJECT_ROOT not in sys.path:
 from dotenv import load_dotenv
 from langchain_groq import ChatGroq
 
-from planning.algorithms.planning_lab.algorithms.environment import NexlinkEnvironment
-from planning.algorithms.planning_lab.algorithms.lats import lats
+from planning.planning_lab.algorithms.environment import NexlinkEnvironment
+from planning.planning_lab.algorithms.lats import lats
 
 load_dotenv()
 
