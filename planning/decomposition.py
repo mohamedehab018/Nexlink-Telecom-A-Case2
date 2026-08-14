@@ -7,37 +7,31 @@ and adapters that will be expanded to call the reference toolkit.
 from typing import Callable, Dict, List, Any, Optional
 from .dag import DAG, build_example_dag
 
-# Try to import the reference toolkit's decomposition modules if the
-# user has placed them under planning/algorithms (forked toolkit). If
-# not present, fall back to local simple implementations above.
+# Try to import the reference toolkit's decomposition modules under the
+# cloned path `planning/algorithms/planning_lab/algorithms`.
 try:
-    from planning.algorithms import decomposition as toolkit_decomposition  # type: ignore
+    from planning.algorithms.planning_lab.algorithms import decomposition as toolkit_decomposition  # type: ignore
+    from planning.algorithms.planning_lab.algorithms import dynamic_decomposition as toolkit_dynamic  # type: ignore
 except Exception:
     toolkit_decomposition = None
-
-try:
-    from planning.algorithms import dynamic_decomposition as toolkit_dynamic  # type: ignore
-except Exception:
     toolkit_dynamic = None
 
 
-def decomposition_first(task_description: str) -> DAG:
+def decomposition_first(task_description: str, llm: Optional[object] = None) -> DAG:
     """Produce a full DAG plan up-front from the task description.
 
     If the forked toolkit is available under `planning/algorithms`, delegate
     to it. Otherwise return a small example DAG.
     """
-    if toolkit_decomposition and hasattr(toolkit_decomposition, "decompose"):
-        # The toolkit's `decompose` is expected to return a structured plan
-        # we must convert into our local DAG representation. This adapter
-        # assumes the toolkit returns a list of (id, predecessors) or similar.
-        tk_plan = toolkit_decomposition.decompose(task_description)
+    # If the cloned toolkit is available and an LLM is provided, use it.
+    if toolkit_decomposition and llm is not None and hasattr(toolkit_decomposition, "decompose_goal"):
+        plan = toolkit_decomposition.decompose_goal(task_description, llm)
         dag = DAG()
-        # Toolkit-specific adapter: accept several common shapes.
-        for node in tk_plan.get("nodes", []):
-            dag.add_node(node["id"])
-        for edge in tk_plan.get("edges", []):
-            dag.add_edge(edge[0], edge[1])
+        for t in plan.tasks:
+            dag.add_node(t.id)
+        for t in plan.tasks:
+            for dep in t.depends_on:
+                dag.add_edge(dep, t.id)
         return dag
 
     # Fallback simple example
@@ -45,16 +39,19 @@ def decomposition_first(task_description: str) -> DAG:
 
 
 def dynamic_decomposition(step_executor: Callable[[str, Dict[str, Any]], Any],
-                          initial_description: str) -> List[Any]:
+                          initial_description: str,
+                          llm: Optional[object] = None) -> List[Any]:
     """Perform interleaved decomposition and execution.
 
     If the forked toolkit implements a dynamic decomposition routine, call
     it and route its requested sub-tasks to `step_executor`. Otherwise use
     a simple hard-coded sequence for demo purposes.
     """
-    if toolkit_dynamic and hasattr(toolkit_dynamic, "run_dynamic_decomposition"):
-        # The toolkit is expected to handle the loop and call our executor
-        return toolkit_dynamic.run_dynamic_decomposition(step_executor, initial_description)
+    if toolkit_dynamic and llm is not None and hasattr(toolkit_dynamic, "dynamic_decomposition"):
+        # toolkit_dynamic.dynamic_decomposition(goal, llm, max_steps)
+        history = toolkit_dynamic.dynamic_decomposition(initial_description, llm)
+        # toolkit returns list[tuple(task, result)] as history; return it directly
+        return history
 
     results = []
     # A trivial sequence matching build_example_dag
