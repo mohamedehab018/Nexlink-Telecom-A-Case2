@@ -1,5 +1,5 @@
-from db import account_exists, get_account_summary, get_equipment_by_account, list_support_tickets
-from schemas import validate_tool_input
+from .db import account_exists, get_account_summary, get_equipment_by_account, list_support_tickets
+from .schemas import validate_tool_input
 
 
 def handle_get_account_summary(account_id: int) -> str:

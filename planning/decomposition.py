@@ -7,12 +7,25 @@ and adapters that will be expanded to call the reference toolkit.
 from typing import Callable, Dict, List, Any, Optional
 from .dag import DAG, build_example_dag
 
-# Try to import the reference toolkit's decomposition modules under the
-# cloned path `planning/algorithms/planning_lab/algorithms`.
-try:
-    from planning.algorithms.planning_lab.algorithms import decomposition as toolkit_decomposition  # type: ignore
-    from planning.algorithms.planning_lab.algorithms import dynamic_decomposition as toolkit_dynamic  # type: ignore
-except Exception:
+import importlib
+import importlib.util
+import os
+
+# Locate an installed toolkit package (prefer site-packages installs).
+toolkit_decomposition = None
+toolkit_dynamic = None
+spec = importlib.util.find_spec("planning_lab")
+if spec and spec.origin:
+    try:
+        # Import under planning_lab.algorithms
+        pkg = importlib.import_module("planning_lab.algorithms")
+        toolkit_decomposition = importlib.import_module("planning_lab.algorithms.decomposition")
+        toolkit_dynamic = importlib.import_module("planning_lab.algorithms.dynamic_decomposition")
+    except Exception:
+        toolkit_decomposition = None
+        toolkit_dynamic = None
+else:
+    # No installed planning_lab; leave toolkits None so fallback demo is used.
     toolkit_decomposition = None
     toolkit_dynamic = None
 

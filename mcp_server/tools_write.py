@@ -2,9 +2,8 @@ import logging
 from typing import Any, Dict, Optional
 from pydantic import BaseModel, Field
 
-import auth
-import db
-from schemas import validate_tool_input
+from . import auth, db
+from .schemas import validate_tool_input
 
 logger = logging.getLogger("nextlink_tools_write")
 
