@@ -9,7 +9,7 @@ from planning.planning_lab.algorithms.environment import (
     GroundedEnvironment,
     _extract_decision,
 )
-from planning.scenarios import (
+from planning_eval.scenarios import (
     BILLING_BUNDLE_SARAH_BRANDEN,
     FAULTY_MODEM_BUNDLE_ELLEN_RIPLEY,
     OUTAGE_BUNDLE_WALTER_WHITE,

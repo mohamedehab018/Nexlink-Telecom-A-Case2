@@ -1,7 +1,7 @@
 """Routing: pure decision logic mapping a sub-task's shape to a method."""
 
 from planning.routing import PlanningMethod, route_subtask
-from planning.planning_test_cases import SCENARIO_CASES
+from planning_eval.test_cases import SCENARIO_CASES
 
 
 def test_linear_subtask_routes_to_plan_and_solve():

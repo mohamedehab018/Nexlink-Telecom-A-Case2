@@ -16,7 +16,7 @@
 > - `decomposition.py`, `dynamic_decomposition.py`, `self_refine.py`,
 >   `reflexion.py` remain the fork's originals.
 > - `cli.py` is the fork's Mistral demo; the repo's Groq entry points are
->   `planning/evaluate_planning.py`, `planning/lats_demo.py` and
+>   `planning_eval/evaluate_planning.py`, `planning/lats_demo.py` and
 >   `planning/tests/`.
 
 This executable lab turns the Week 4 concepts into a compact agent pipeline:

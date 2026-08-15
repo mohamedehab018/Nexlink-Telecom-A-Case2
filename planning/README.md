@@ -36,7 +36,7 @@ That bundle is not a single tool call and not a single LLM turn:
 | **Decomposition-first** | `planning_lab/algorithms/decomposition.py` (`decompose_goal`, `execute_plan`) | One structured call generates the whole DAG up front; tool nodes run through the real executor, LLM runs reasoning nodes, parallel batches preserved |
 | **Dynamic/interleaved** | `planning_lab/algorithms/dynamic_decomposition.py` (`dynamic_decomposition`) | Next sub-task is decided after observing the previous real result; a runtime failure reshapes what comes next |
 | **Real MCP tools** | `mcp_tools.py` (`MCPToolExecutor`) | Same handlers, same `db/` database, same `auth` gate, same input schemas as the live server — including the real `SECURITY ERROR` a write returns for an unverified session |
-| Real staff requests | `scenarios.py` | Recurring Nexlink bundles used by the demo and the eval suite |
+| Real staff requests | `planning_eval/scenarios.py` | Recurring Nexlink bundles used by the demo and the eval suite |
 
 The executor deliberately does **not** rebuild the toolkit's scheduling: it
 keeps the upstream `Plan`/`Task` models, the networkx topological batches, and
@@ -92,14 +92,68 @@ the fork-status of each module. Delivered:
 | Real feedback | `planning_lab/algorithms/environment.py` (`GroundedEnvironment`) | Executes the proposal's write through the real MCP executor + auth gate; correct write = 1.0, correct decision failed write = 0.5, wrong executed write = 0.3, wrong failed = 0.1 |
 | Routing | `routing.py` (`route_subtask`) | Linear sub-tasks → Plan-and-Solve; external-validation sub-tasks → LATS; else ToT; defaults to Plan-and-Solve |
 | Cost accounting | `cost.py` (`TrackingLLM`) | Tracks calls + input/output chars, `estimate_cost` against Groq pricing |
-| Evaluation | `evaluate_planning.py` + `planning_test_cases.py` | Generic keyword cases + real scenario bundles (grounded); records routing, tokens, cost, latency; saves `artifacts/run-*.json`; offline fallback when no `GROQ_API_KEY` |
+| Evaluation | `planning_eval/evaluate_planning.py` + `planning_eval/test_cases.py` | Generic keyword cases + real scenario bundles (grounded); records routing, tokens, cost, latency; saves `planning_eval/artifacts/run-*.json`; offline fallback when no `GROQ_API_KEY` |
 | Tests | `tests/test_{plan_and_solve,tree_of_thoughts,lats,grounded_environment,routing}.py` | Deterministic offline via `ScriptedLLM` + temp DB |
 
-### Person 3 — self-correction + grounding + final evidence
+## Method comparison table
 
-- Adapt `self_refine.py` and `reflexion.py` to the real sub-task types
-  (`deterministic_checks`/`reflect_and_refine` and `reflexion` are currently
-  the fork originals).
-- Replace the remaining keyword-scored generic cases with the full grounded
-  comparison table (all methods on all scenario bundles), a demo transcript,
-  and live agent wiring in `agent/agent.py`.
+All planning methods run against every applicable case (10 keyword cases +
+3 real scenario bundles), scored by `NexlinkEnvironment` for the keyword cases
+and by `GroundedEnvironment` (real DB + auth gate) for the bundles. The runner
+is `planning_eval/evaluate_planning.py`; it saves the full trace to
+`planning_eval/artifacts/run-*.json`.
+
+Source: offline deterministic run
+[`planning_eval/artifacts/run-20260815T184546Z.json`](../planning_eval/artifacts/run-20260815T184546Z.json)
+(no API key, so `LLM calls`/`est. cost` are 0; the offline pipeline is
+reproducible). With `GROQ_API_KEY` set, the same run fills in real calls /
+tokens / latency / cost per method:
+
+```bash
+python planning_eval/evaluate_planning.py            # all methods, live API
+python planning_eval/evaluate_planning.py DECOMPOSITION_FIRST,DYNAMIC   # subset
+```
+
+| Method | Success rate | Avg score | Avg latency | LLM calls | est. cost |
+| --- | --- | --- | --- | --- | --- |
+| Plan-and-Solve (PS) | 76.9% | 0.843 | 0.012s | 0 | $0.00 |
+| Tree-of-Thoughts | 23.1% | 0.231 | 0.011s | 0 | $0.00 |
+| Grounded LATS | 76.9% | 0.843 | 0.011s | 0 | $0.00 |
+| Ungrounded LATS (control) | 46.2% | 0.679 | 0.013s | 0 | $0.00 |
+| Decomposition-first | 33.3% | 0.667 | 0.056s | 0 | $0.00 |
+| Dynamic decomposition | 100% | 1.000 | 0.064s | 0 | $0.00 |
+| Self-Refine | 100% | 1.000 | 0.052s | 0 | $0.00 |
+| Reflexion | 100% | 1.000 | 0.065s | 0 | $0.00 |
+
+Reading the baseline:
+
+- PS and grounded LATS tie on the keyword cases (the cheapest method wins on
+  latency); ToT and ungrounded LATS lose because their outputs miss the
+  keyword terms, and ungrounded LATS has no real feedback to correct course.
+- Decomposition-first, Dynamic, Self-Refine and Reflexion run on the **3
+  grounded bundles** only (they need real MCP tools / a real environment).
+  The decomposition rows are scored by **plan execution**, not just the final
+  decision: the resolution counts only if the plan's *own* write succeeded.
+  Decomposition-first commits a stale DAG whose write node skips session
+  verification, so its write hits the real `SECURITY ERROR` on the dispatch
+  and credit bundles (correct decision, write failed = 0.5) and only the
+  no-dispatch bundle resolves -> **1/3 (33%)**. Dynamic decomposition observes
+  the failed write, verifies, and re-attempts it -> **3/3 (100%)**. That is
+  the divergence, visible in the table. (Cost on the unaffected rows is
+  unchanged; a wrong executed write would also score 0.3, the `$150` case.)
+
+### Person 3 — self-correction + grounding + final evidence (in progress)
+
+- `self_refine.py` and `reflexion.py` are adapted to the real sub-task types
+  and wired into the eval as `SELF_REFINE` / `REFLEXION` rows (self-refine:
+  PS draft + deterministic checks + independent critique; reflexion:
+  episodic memory across trials, evaluated against `GroundedEnvironment`).
+- Comparison table with all methods on all scenario bundles is above; run the
+  eval with `GROQ_API_KEY` set to replace the offline numbers with live
+  calls/tokens/cost.
+- Demo transcript: `planning_eval/demo.md` (regenerated offline by
+  `python planning_eval/run_demo.py`) -- divergence case, one sub-task per
+  method, Self-Refine revision, Reflexion cross-trial learning, and the
+  grounded-vs-keyword `$150` case.
+- TODO: live agent wiring in `agent/planning_agent.py` (currently does not
+  import `planning/`).

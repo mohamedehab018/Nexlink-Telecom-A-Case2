@@ -12,6 +12,23 @@ def _messages(texts):
     return [("human", text) for text in texts]
 
 
+def test_real_tokens_prefers_usage_metadata():
+    response = SimpleNamespace(usage_metadata={"input_tokens": 1200, "output_tokens": 400})
+    assert ThrottledLLM._real_tokens(response) == 1600
+
+
+def test_real_tokens_falls_back_to_response_metadata():
+    response = SimpleNamespace(
+        usage_metadata=None,
+        response_metadata={"token_usage": {"prompt_tokens": 200, "completion_tokens": 30}},
+    )
+    assert ThrottledLLM._real_tokens(response) == 230
+
+
+def test_real_tokens_returns_zero_when_unavailable():
+    assert ThrottledLLM._real_tokens(SimpleNamespace(content="hi")) == 0.0
+
+
 def test_estimate_cost_scales_with_char_count():
     assert estimate_cost(4000, 4000) > estimate_cost(1000, 1000)
     assert estimate_cost(0, 0) == 0.0
@@ -42,7 +59,7 @@ def test_throttle_measures_real_output_when_inner_tracks():
     wrapped = ThrottledLLM(TrackingLLM(inner), tpm=6000)
     wrapped.invoke(_messages(["prompt"]))
     recorded = sum(t for _, t in wrapped._usage)
-    assert recorded >= len("prompt") / CHARS_PER_TOKEN + 100 / CHARS_PER_TOKEN
+    assert recorded >= 1 + 100 / CHARS_PER_TOKEN  # 1 input token + output chars/4
 
 
 def test_throttle_does_not_deadlock_on_call_larger_than_budget():

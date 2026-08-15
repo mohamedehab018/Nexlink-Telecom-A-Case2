@@ -68,19 +68,43 @@ class ThrottledLLM:
 
     Groq's free tier caps `llama-3.1-8b-instant` at 6000 TPM, so an evaluation
     that fires calls back-to-back gets 429 rate-limit errors. This wrapper
-    estimates the incoming prompt's tokens (chars / `CHARS_PER_TOKEN`), sleeps
-    whenever the trailing window plus the new call would exceed the budget, and
-    records the call's real output size afterwards (measured via an inner
-    `TrackingLLM` snapshot, or estimated from the response when absent).
+    estimates the incoming prompt's tokens with tiktoken's cl100k_base (Llama 3
+    uses that tokenizer; chars/4 is the fallback), sleeps whenever the trailing
+    window plus the new call would exceed the budget, and records the call's
+    *real* token usage from the model response afterwards. Recording real usage
+    is what keeps the window honest: markdown-heavy prompts cost ~3x the
+    chars/4 guess, which is exactly why the naive estimate still 429'd.
     """
 
     def __init__(self, llm: Any, tpm: int = 6000, window: float = 55.0,
-                 buffer_fraction: float = 0.9):
+                 buffer_fraction: float = 0.8):
         self.llm = llm
         self.tpm = tpm
         self.window = window
         self.budget = tpm * buffer_fraction
         self._usage: deque = deque()
+        self._encoder = None
+
+    def _estimate_tokens(self, messages) -> float:
+        try:
+            if self._encoder is None:
+                import tiktoken
+                self._encoder = tiktoken.encoding_for_model("gpt-4")  # cl100k_base
+            text = "\n".join(str(message[1]) for message in messages)
+            return float(len(self._encoder.encode(text)))
+        except Exception:
+            return max(1.0, sum(len(str(message[1])) for message in messages) / CHARS_PER_TOKEN)
+
+    @staticmethod
+    def _real_tokens(response) -> float:
+        usage_metadata = getattr(response, "usage_metadata", None)
+        if isinstance(usage_metadata, dict):
+            return usage_metadata.get("input_tokens", 0) + usage_metadata.get("output_tokens", 0)
+        metadata = getattr(response, "response_metadata", None) or {}
+        token_usage = metadata.get("token_usage")
+        if isinstance(token_usage, dict):
+            return token_usage.get("prompt_tokens", 0) + token_usage.get("completion_tokens", 0)
+        return 0.0
 
     def _used(self) -> float:
         now = time.monotonic()
@@ -101,16 +125,21 @@ class ThrottledLLM:
         self._usage.append((time.monotonic(), tokens))
 
     def invoke(self, messages, **kwargs):
-        needed = max(1.0, sum(len(str(message[1])) for message in messages) / CHARS_PER_TOKEN)
+        needed = self._estimate_tokens(messages)
         self._wait(needed)
         before = self.llm.snapshot() if hasattr(self.llm, "snapshot") else None
         response = self.llm.invoke(messages, **kwargs)
-        if before is not None:
-            output_chars = TrackingLLM.delta(before, self.llm.snapshot())["output_chars"]
+        real = self._real_tokens(response)
+        if real:
+            self._record(real)
         else:
-            content = getattr(response, "content", "")
-            output_chars = len(content) if isinstance(content, str) else 0
-        self._record(needed + output_chars / CHARS_PER_TOKEN)
+            output_chars = 0
+            if before is not None:
+                output_chars = TrackingLLM.delta(before, self.llm.snapshot())["output_chars"]
+            else:
+                content = getattr(response, "content", "")
+                output_chars = len(content) if isinstance(content, str) else 0
+            self._record(needed + output_chars / CHARS_PER_TOKEN)
         return response
 
     def with_structured_output(self, schema, **kwargs):
