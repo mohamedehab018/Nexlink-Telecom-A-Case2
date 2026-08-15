@@ -3,7 +3,7 @@
 import pytest
 
 from planning import Plan, Task
-from planning.algorithms.planning_lab.models import NODE_KINDS
+from planning.planning_lab.models import NODE_KINDS
 
 
 def _plan(tasks):

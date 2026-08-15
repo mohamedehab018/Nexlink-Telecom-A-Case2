@@ -11,8 +11,8 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from planning import MCPToolExecutor  # noqa: E402
-from planning.algorithms.planning_lab.algorithms.decomposition import GeneratedPlan  # noqa: E402
-from planning.algorithms.planning_lab.algorithms.dynamic_decomposition import DynamicDecision  # noqa: E402
+from planning.planning_lab.algorithms.decomposition import GeneratedPlan  # noqa: E402
+from planning.planning_lab.algorithms.dynamic_decomposition import DynamicDecision  # noqa: E402
 
 
 def build_temp_db(tmp_path: Path) -> str:
@@ -44,14 +44,18 @@ class ScriptedLLM:
     planner calls and canned prose for reasoning nodes. Never touches the API.
 
     `plans` is a list of dicts (GeneratedPlan payloads), `decisions` a list of
-    dicts (DynamicDecision payloads), consumed in order. `prompts` records the
-    exact messages seen so tests can assert on real context/token growth.
+    dicts (DynamicDecision payloads), consumed in order. `responses` is a list
+    of (needle, content) tuples: plain `invoke` returns the first `content`
+    whose needle appears in the human message, falling back to `prose`.
+    `prompts` records the exact messages seen so tests can assert on real
+    context/token growth.
     """
 
-    def __init__(self, plans=None, decisions=None, prose="Completed the reasoning sub-task."):
+    def __init__(self, plans=None, decisions=None, prose="Completed the reasoning sub-task.", responses=None):
         self.plans = list(plans or [])
         self.decisions = list(decisions or [])
         self.prose = prose
+        self.responses = list(responses or [])
         self.prompts = []
 
     class _Structured:
@@ -78,6 +82,10 @@ class ScriptedLLM:
 
     def invoke(self, messages, **kwargs):
         self.prompts.append(messages)
+        text = " ".join(str(m[1]) for m in messages)
+        for needle, content in self.responses:
+            if needle in text:
+                return SimpleNamespace(content=content)
         return SimpleNamespace(content=self.prose)
 
     @property

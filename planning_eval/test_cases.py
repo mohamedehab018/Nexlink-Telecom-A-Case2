@@ -6,12 +6,12 @@ Two families:
 - `GENERIC_CASES`: keyword problems scored by `NexlinkEnvironment` -- the
   cheap, ungrounded baseline (the model's own terms are the only signal).
 - `SCENARIO_CASES`: the real incident-resolution bundles from
-  `planning/scenarios.py`, evaluated by `GroundedEnvironment` which executes
-  the proposal's write against the real DB + auth gate. Each case carries a
-  `shape` describing the sub-task for `planning.routing.route_subtask`.
+  `planning_eval/scenarios.py`, evaluated by `GroundedEnvironment` which
+  executes the proposal's write against the real DB + auth gate. Each case
+  carries a `shape` describing the sub-task for `planning.routing.route_subtask`.
 """
 
-from planning.scenarios import (
+from planning_eval.scenarios import (
     BILLING_BUNDLE_SARAH_BRANDEN,
     FAULTY_MODEM_BUNDLE_ELLEN_RIPLEY,
     OUTAGE_BUNDLE_WALTER_WHITE,
