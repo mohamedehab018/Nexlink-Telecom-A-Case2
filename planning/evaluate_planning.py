@@ -38,7 +38,7 @@ from planning.planning_lab.algorithms.lats import flatten_lats_tree, lats
 from planning.planning_lab.algorithms.lats_ungrounded import lats_ungrounded
 from planning.planning_lab.algorithms.plan_and_solve import plan_and_solve
 from planning.planning_lab.algorithms.tree_of_thoughts import tree_of_thoughts
-from planning.cost import TrackingLLM
+from planning.cost import ThrottledLLM, TrackingLLM
 from planning.mcp_tools import MCPToolExecutor
 from planning.planning_test_cases import GENERIC_CASES, SCENARIO_CASES
 from planning.routing import route_subtask
@@ -49,7 +49,7 @@ ARTIFACT_DIR = Path(__file__).resolve().parent / "artifacts"
 
 MAX_RETRIES = 2
 RETRY_DELAY = 2.0
-TOT_DEPTH = 2
+TOT_DEPTH = 1
 TOT_BEAM_WIDTH = 2
 LATS_ITERATIONS = 2
 LATS_ACTIONS = 2
@@ -60,12 +60,16 @@ def create_llm():
     if not api_key:
         print("WARNING: GROQ_API_KEY not found in .env")
         return None
+    tpm = int(os.getenv("GROQ_TPM", "6000"))
     return TrackingLLM(
-        ChatGroq(
-            model_name="llama-3.1-8b-instant",
-            groq_api_key=api_key,
-            temperature=0.0,
-            max_tokens=700,
+        ThrottledLLM(
+            ChatGroq(
+                model_name="llama-3.1-8b-instant",
+                groq_api_key=api_key,
+                temperature=0.0,
+                max_tokens=700,
+            ),
+            tpm=tpm,
         )
     )
 

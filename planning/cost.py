@@ -7,6 +7,8 @@ output characters, and an estimated cost for the chosen Groq model.
 
 from __future__ import annotations
 
+import time
+from collections import deque
 from typing import Any, Dict, List
 
 GROQ_MODEL = "llama-3.1-8b-instant"
@@ -59,3 +61,64 @@ class TrackingLLM:
     @staticmethod
     def cost_for(usage: Dict[str, int]) -> float:
         return estimate_cost(usage["input_chars"], usage["output_chars"])
+
+
+class ThrottledLLM:
+    """Paces calls to stay under a rolling per-minute token budget.
+
+    Groq's free tier caps `llama-3.1-8b-instant` at 6000 TPM, so an evaluation
+    that fires calls back-to-back gets 429 rate-limit errors. This wrapper
+    estimates the incoming prompt's tokens (chars / `CHARS_PER_TOKEN`), sleeps
+    whenever the trailing window plus the new call would exceed the budget, and
+    records the call's real output size afterwards (measured via an inner
+    `TrackingLLM` snapshot, or estimated from the response when absent).
+    """
+
+    def __init__(self, llm: Any, tpm: int = 6000, window: float = 55.0,
+                 buffer_fraction: float = 0.9):
+        self.llm = llm
+        self.tpm = tpm
+        self.window = window
+        self.budget = tpm * buffer_fraction
+        self._usage: deque = deque()
+
+    def _used(self) -> float:
+        now = time.monotonic()
+        while self._usage and now - self._usage[0][0] > self.window:
+            self._usage.popleft()
+        return sum(tokens for _, tokens in self._usage)
+
+    def _wait(self, needed: float) -> None:
+        if needed >= self.budget:
+            return
+        used = self._used()
+        while used + needed > self.budget:
+            overflow = used + needed - self.budget
+            time.sleep(max(self.window * overflow / self.budget, 1.0))
+            used = self._used()
+
+    def _record(self, tokens: float) -> None:
+        self._usage.append((time.monotonic(), tokens))
+
+    def invoke(self, messages, **kwargs):
+        needed = max(1.0, sum(len(str(message[1])) for message in messages) / CHARS_PER_TOKEN)
+        self._wait(needed)
+        before = self.llm.snapshot() if hasattr(self.llm, "snapshot") else None
+        response = self.llm.invoke(messages, **kwargs)
+        if before is not None:
+            output_chars = TrackingLLM.delta(before, self.llm.snapshot())["output_chars"]
+        else:
+            content = getattr(response, "content", "")
+            output_chars = len(content) if isinstance(content, str) else 0
+        self._record(needed + output_chars / CHARS_PER_TOKEN)
+        return response
+
+    def with_structured_output(self, schema, **kwargs):
+        if hasattr(self.llm, "with_structured_output"):
+            return self.llm.with_structured_output(schema, **kwargs)
+        raise NotImplementedError("Underlying LLM has no with_structured_output")
+
+    def snapshot(self) -> Dict[str, int]:
+        if hasattr(self.llm, "snapshot"):
+            return self.llm.snapshot()
+        raise NotImplementedError("Underlying LLM has no snapshot")
