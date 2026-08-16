@@ -546,11 +546,13 @@ def evaluate_grounded(case, llm, method):
             if llm is None:
                 draft = fallback_decision(case)
                 fake = _FallbackLLM(prose=draft)
-                result = reflect_and_refine(task, draft, fake)
+                result = reflect_and_refine(task, draft, fake, environment=env)
                 output = result.revised
             else:
                 draft = run_with_retry(lambda: plan_and_solve(task, llm), "PS")
-                result = run_with_retry(lambda: reflect_and_refine(task, draft, llm), "Self-Refine")
+                result = run_with_retry(
+                    lambda: reflect_and_refine(task, draft, llm, environment=env), "Self-Refine",
+                )
                 output = result.revised
             return scored(env.evaluate(output), output, "Self-Refine")
 

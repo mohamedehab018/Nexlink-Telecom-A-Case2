@@ -142,12 +142,35 @@ Reading the baseline:
   the divergence, visible in the table. (Cost on the unaffected rows is
   unchanged; a wrong executed write would also score 0.3, the `$150` case.)
 
-### Person 3 — self-correction + grounding + final evidence (in progress)
+### Person 3 — self-correction + grounding + integration
 
-- `self_refine.py` and `reflexion.py` are adapted to the real sub-task types
-  and wired into the eval as `SELF_REFINE` / `REFLEXION` rows (self-refine:
-  PS draft + deterministic checks + independent critique; reflexion:
-  episodic memory across trials, evaluated against `GroundedEnvironment`).
+- `self_refine.py` now accepts an optional `environment` (a
+  `GroundedEnvironment`, built on the real `MCPToolExecutor`): when given, the
+  critique and revision prompts see real, DB-executed grounded feedback
+  instead of only the generic `deterministic_checks()` heuristic. It also
+  accepts an independent `critic` model, separate from the model that drafts
+  the revision, so the eval can test whether a different critic changes the
+  outcome. `reflexion.py`'s loop is unchanged from the fork -- it already took
+  a real `environment`; what changed is that the toolkit's fake, randomized
+  `Environment` and the real `GroundedEnvironment` are now both tested
+  side by side (`planning/tests/test_reflexion.py`) so the risk of silently
+  using the fake one is caught, not just documented.
+- `ungrounded_critique()` (new) is the deliberate ungrounded baseline: the
+  same model judging the same draft with no database access at all, used
+  only to demonstrate what grounding catches
+  (`planning/tests/test_self_refine.py::test_grounded_vs_ungrounded_critique_on_the_same_wrong_draft`).
+- `planning/self_correction.py` (new) is the integration point:
+  `resolve_with_self_correction(goal, proposal, llm, environment)` validates
+  a proposal against the real `GroundedEnvironment` and escalates only as far
+  as needed -- no correction if it already passes, one `reflect_and_refine()`
+  pass if that's enough, a full `reflexion()` retry loop (capped episodic
+  buffer) if one revision isn't. This is what the live agent should call once
+  it has a proposal and before anything gets written for real; wiring it into
+  `agent/planning_agent.py`'s tool is the next step once that tool exists on
+  `main` (currently it only exposes `nextlink_knowledge_base`).
+- Self-Refine's internal critique in the comparison eval
+  (`planning_eval/evaluate_planning.py`'s `SELF_REFINE` row) is now grounded
+  too (`environment=env`), not only the row's final external score.
 - Comparison table with all methods on all scenario bundles is above; run the
   eval with `GROQ_API_KEY` set to replace the offline numbers with live
   calls/tokens/cost.
@@ -155,5 +178,7 @@ Reading the baseline:
   `python planning_eval/run_demo.py`) -- divergence case, one sub-task per
   method, Self-Refine revision, Reflexion cross-trial learning, and the
   grounded-vs-keyword `$150` case.
-- TODO: live agent wiring in `agent/planning_agent.py` (currently does not
-  import `planning/`).
+- Test suite: `planning/tests/test_self_refine.py`,
+  `planning/tests/test_reflexion.py`, `planning/tests/test_self_correction.py`
+  -- all run against a real, isolated copy of `db/nexlink.db` via the
+  `executor`/`db_path` fixtures, not mocks.
