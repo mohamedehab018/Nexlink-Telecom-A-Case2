@@ -205,16 +205,16 @@ def part_one_subtask_per_method():
 
 def part_self_refine():
     lines = []
-    lines.append("## Part C — Self-Refine: a draft is critiqued and revised")
+    lines.append("## Part C — Self-Refine: a draft is critiqued and revised (grounded via GroundedEnvironment)")
     lines.append("")
     build_temp_db()
     task, env = fresh_grounded(DISPATCH)
     draft = WRONG_REMOTE  # short, unstructured, ignores the hardware evidence
     llm = DemoLLM(prose=CORRECT_DISPATCH)
-    result = reflect_and_refine(task, draft, llm)
+    result = reflect_and_refine(task, draft, llm, environment=env)
     lines.append(f"Draft: `{draft}`")
     lines.append("")
-    lines.append("Deterministic checks (grounded, no LLM):")
+    lines.append(f"External checks (source: {result.grounded_source} -- real MCP handlers + DB, not keywords):")
     for issue in result.grounded_issues:
         lines.append(f"- {issue}")
     lines.append("")

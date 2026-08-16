@@ -3,8 +3,10 @@
 Modules `plan_and_solve`, `tree_of_thoughts`, `lats` and `environment` are the
 team's Groq-compatible adaptations of the forked toolkit's demo modules (see
 `README.upstream.md`); `lats_ungrounded` is added by the planning-methods task.
-`decomposition`, `dynamic_decomposition`, `self_refine` and `reflexion` remain
-the fork's originals.
+`decomposition`, `dynamic_decomposition` and `reflexion` remain the fork's
+originals. `self_refine` is adapted by the self-correction task: it can now
+be grounded against the real `GroundedEnvironment` instead of only the
+generic `deterministic_checks()` heuristic (see `self_refine.py`).
 """
 
 from .decomposition import (
@@ -14,18 +16,19 @@ from .decomposition import (
     final_output,
 )
 from .dynamic_decomposition import DynamicDecision, dynamic_decomposition
-from .environment import Environment, NexlinkEnvironment
+from .environment import Environment, GroundedEnvironment, NexlinkEnvironment
 from .lats import flatten_lats_tree, lats, LATSNode, LATSResult
 from .lats_ungrounded import lats_ungrounded
 from .plan_and_solve import plan_and_solve
 from .reflexion import reflexion
-from .self_refine import deterministic_checks, reflect_and_refine
+from .self_refine import deterministic_checks, reflect_and_refine, ungrounded_critique
 from .tree_of_thoughts import tree_of_thoughts, ThoughtNode
 
 __all__ = [
     "DynamicDecision",
     "Environment",
     "GeneratedPlan",
+    "GroundedEnvironment",
     "LATSNode",
     "LATSResult",
     "NexlinkEnvironment",
@@ -42,4 +45,5 @@ __all__ = [
     "reflexion",
     "reflect_and_refine",
     "tree_of_thoughts",
+    "ungrounded_critique",
 ]
