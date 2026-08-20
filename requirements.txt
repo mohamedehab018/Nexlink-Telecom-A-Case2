@@ -27,3 +27,7 @@ rank-bm25>=0.2.2
 
 # --- Optional: semantic embeddings ---
 sentence-transformers>=3.0
+
+# --- Backend API ---
+fastapi>=0.104.0
+uvicorn>=0.24.0
