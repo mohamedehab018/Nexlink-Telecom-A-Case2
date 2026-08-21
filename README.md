@@ -85,6 +85,30 @@ The agent routes to the cheapest sufficient architecture via `_route()` in `agen
 We built an **MCP (Model Context Protocol) Server** to act as a secure, intelligent bridge. 
 ### Note: to be written once we have figured out all the features.
 
+## Person 1: Network Outage Diagnosis and Field Dispatch
+
+`graphs/outage/workflow.py` is a durable, explicit state graph for a real ISP outage: `RECEIVED -> NORMALIZING -> DIAGNOSING -> HYPOTHESIS_GENERATION -> VERIFYING -> DECIDING`, then either `HITL -> WAITING_FOR_HUMAN -> DISPATCHING -> WAITING_FOR_FIELD -> VERIFY_RESOLUTION -> COMPLETED` or a monitor/verification route. A failed field visit loops back to diagnosis. Deterministic code owns every edge; a low-confidence diagnosis or any physical-line dispatch is a real human gate.
+
+LATS is bounded to three evidence-scored outage candidates, stored in state; its winner determines whether a dispatch requires approval. The verification node is a bounded constrained-ReAct tool loop: only five named outage operations are permitted, each input/output is validated, and each call is persisted in `outage_tool_audit`. This prevents an LLM from accessing arbitrary MCP capabilities.
+
+`shared/checkpointing/` is reusable by every graph and records immutable SQLite checkpoints after each meaningful node transition. `shared/outage_persistence.py` adds incidents, runs, hypotheses, tool audit, HITL tasks, and failure tickets to the existing database. HITL (`pending/approved/rejected/modified`) is an expected business pause: the graph creates a durable admin task, waits, and uses the persisted admin decision to choose its next edge. Unexpected tool/schema/runtime errors instead create a distinct `failure_tickets` row (`open/investigating/resolved`); the graph cannot resume until an admin resolves that ticket. The idempotency ledger prevents completed dispatch side effects from repeating after restart.
+
+The FastAPI surface is `backend/app.py`; the associated Next.js console is `frontend/outage_ui/`. It lists incidents, opens persisted detail, and submits admin HITL decisions to the same backend. API endpoints include incident creation/list/details, checkpoint/tool history, HITL decisions, field results, tickets, and ticket recovery.
+
+### Run and demo
+
+```powershell
+python -m pip install -r requirements.txt
+uvicorn backend.app:app --reload
+cd frontend/outage_ui; npm install; npm run dev
+# POST /api/outages with {"account_id":1,"symptoms":["no internet"]}; approve via the UI/API; POST field-result.
+python scripts/outage_recovery_demo.py
+# launches a child process, kills it after its DIAGNOSING checkpoint,
+# then starts a fresh process that loads and resumes the saved state.
+```
+
+The legacy planning correction remains intentionally small: `planning/planning_lab/algorithms/decomposition.py` preserves the caller goal, validates structured DAG output, runs real MCP-bound tasks through the executor, and avoids planning invented tools.
+
 ## Database Architecture
 
 To execute provisioning and diagnostics, the MCP server connects to a local relational database (SQLite). The schema enforces strict data integrity using `AUTOINCREMENT` integer primary keys, explicit foreign key relations, and strict `CHECK` constraints to emulate Enums for equipment statuses and ticketing.

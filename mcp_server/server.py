@@ -23,6 +23,7 @@ from schemas import validate_tool_input
 import tools_diagnostic
 import tools_read
 import tools_write
+import outage_tools
 
 # Logging setup (use stderr so we don't interfere with stdio communication)
 logging.basicConfig(
@@ -130,6 +131,22 @@ async def diagnose_equipment_issue(serial_num: str, ctx: Context) -> str:
 )
 async def run_network_diagnostic_sweep(account_id: int, ctx: Context) -> str:
     return await tools_diagnostic.handle_run_network_diagnostic_sweep(account_id, ctx=ctx)
+
+@mcp.tool(name="lookup_outage_incident", description="Get account and prior-ticket evidence for an outage graph.")
+def lookup_outage_incident(account_id: int) -> dict:
+    return outage_tools.lookup_outage_incident(account_id)
+
+@mcp.tool(name="outage_equipment_diagnostics", description="Structured equipment evidence for outage diagnosis.")
+def outage_equipment_diagnostics(account_id: int) -> dict:
+    return outage_tools.equipment_diagnostics(account_id)
+
+@mcp.tool(name="outage_network_sweep", description="Structured line/network sweep for outage diagnosis.")
+def outage_network_sweep(account_id: int) -> dict:
+    return outage_tools.network_sweep(account_id)
+
+@mcp.tool(name="outage_resolution_check", description="Verify current equipment state after outage remediation.")
+def outage_resolution_check(account_id: int) -> dict:
+    return outage_tools.resolution(account_id)
 
 
 # --- WRITE OPERATIONS ---
