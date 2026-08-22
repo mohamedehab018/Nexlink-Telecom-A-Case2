@@ -19,10 +19,12 @@ export default function RAGPage() {
   const [form, setForm] = useState({
     doc_id: '', text: '', category: 'knowledge', model: 'all', doc_date: '2026-01-01', source_doc: '',
   });
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
   const load = async () => {
     try {
+      setLoading(true);
       const [docsRes, statsRes] = await Promise.all([
         fetch(`${api}/api/rag/documents`),
         fetch(`${api}/api/rag/stats`),
@@ -33,6 +35,7 @@ export default function RAGPage() {
       }
       if (statsRes.ok) setStats(await statsRes.json());
     } catch (e) { setError(e.message); }
+    finally { setLoading(false); }
   };
 
   useEffect(() => { load(); }, []);
@@ -53,7 +56,7 @@ export default function RAGPage() {
 
   const handleAdd = async (e) => {
     e.preventDefault();
-    setError(''); setSuccess(''); setLoading(true);
+    setError(''); setSuccess(''); setSubmitting(true);
     try {
       const res = await fetch(`${api}/api/rag/documents`, {
         method: 'POST',
@@ -69,7 +72,7 @@ export default function RAGPage() {
       setForm({ doc_id: '', text: '', category: 'knowledge', model: 'all', doc_date: '2026-01-01', source_doc: '' });
       load();
     } catch (e) { setError(e.message); }
-    finally { setLoading(false); }
+    finally { setSubmitting(false); }
   };
 
   return (
@@ -79,6 +82,13 @@ export default function RAGPage() {
       {error && <div className="alert alert-error">{error}</div>}
       {success && <div className="alert alert-success">{success}</div>}
 
+      {loading ? (
+        <div className="card" style={{ textAlign: 'center', padding: '64px 24px' }}>
+          <div className="spinner" />
+          <p style={{ marginTop: '16px', color: 'var(--muted)' }}>Loading documents...</p>
+        </div>
+      ) : (
+      <>
       <div className="stats-grid">
         <StatsCard label="Documents" value={stats?.total_documents ?? '—'} color="blue" />
         <StatsCard label="Total Chunks" value={stats?.total_chunks ?? '—'} color="green" />
@@ -186,6 +196,8 @@ export default function RAGPage() {
           )}
         </div>
       </div>
+      </>
+      )}
     </>
   );
 }
