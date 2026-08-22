@@ -4,7 +4,7 @@ Run with: uvicorn backend.main:app --reload
 """
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .routes import tickets, failures, health
+from .routes import tickets, failures, health, outages, tools
 
 
 app = FastAPI(
@@ -26,6 +26,8 @@ app.add_middleware(
 app.include_router(health.router, prefix="/api", tags=["health"])
 app.include_router(tickets.router, prefix="/api/tickets", tags=["tickets"])
 app.include_router(failures.router, prefix="/api/failures", tags=["failures"])
+app.include_router(outages.router, prefix="/api", tags=["outages"])
+app.include_router(tools.router, prefix="/api", tags=["tools"])
 
 
 @app.get("/")
