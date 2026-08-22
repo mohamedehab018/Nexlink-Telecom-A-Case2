@@ -211,6 +211,104 @@ class VectorStore:
             )
         return hits
 
+    # --- document management ---
+
+    def list_documents(self) -> List[Dict[str, object]]:
+        """List all unique documents with their metadata and chunk counts."""
+        all_points = self.get_all(limit=100_000)
+        docs: Dict[str, Dict[str, object]] = {}
+        for item in all_points:
+            meta = item["metadata"]
+            doc_id = str(meta.get("doc_id", ""))
+            if not doc_id:
+                continue
+            if doc_id not in docs:
+                docs[doc_id] = {
+                    "doc_id": doc_id,
+                    "source_doc": meta.get("source_doc", ""),
+                    "category": meta.get("category", ""),
+                    "model": meta.get("model", ""),
+                    "doc_date": meta.get("doc_date", ""),
+                    "chunk_count": 0,
+                }
+            docs[doc_id]["chunk_count"] += 1
+        return list(docs.values())
+
+    def get_document(self, doc_id: str) -> Optional[Dict[str, object]]:
+        """Get a single document's metadata and chunks by doc_id."""
+        all_points = self.get_all(limit=100_000)
+        chunks = []
+        meta = None
+        for item in all_points:
+            if item["metadata"].get("doc_id") == doc_id:
+                if meta is None:
+                    meta = dict(item["metadata"])
+                chunks.append({"text": item["text"], "metadata": item["metadata"]})
+        if meta is None:
+            return None
+        return {
+            "doc_id": doc_id,
+            "source_doc": meta.get("source_doc", ""),
+            "category": meta.get("category", ""),
+            "model": meta.get("model", ""),
+            "doc_date": meta.get("doc_date", ""),
+            "chunk_count": len(chunks),
+            "chunks": chunks,
+        }
+
+    def delete_document(self, doc_id: str) -> bool:
+        """Delete all chunks belonging to a document."""
+        all_points = self.get_all(limit=100_000)
+        point_ids = [
+            item["id"]
+            for item in all_points
+            if item["metadata"].get("doc_id") == doc_id
+        ]
+        if not point_ids:
+            return False
+        self.client.delete(
+            collection_name=self.collection,
+            points_selector=models.PointIdsList(points=point_ids),
+        )
+        return True
+
+    def add_document(
+        self,
+        doc_id: str,
+        text: str,
+        category: str = "knowledge",
+        model: str = "all",
+        doc_date: str = "2026-01-01",
+        source_doc: str = "",
+    ) -> int:
+        """Add a single document, chunking it and upserting into the store."""
+        from rag.ingest import Chunk, split_sections, _chunk_text
+        from rag.config import RAGConfig
+
+        config = RAGConfig()
+        raw = Chunk(
+            text=text,
+            metadata={
+                "doc_id": doc_id,
+                "source_doc": source_doc or f"{doc_id}.md",
+                "category": category,
+                "model": model,
+                "doc_date": doc_date,
+            },
+        )
+        sections = split_sections(raw.text)
+        chunks: List[Chunk] = []
+        chunk_index = 0
+        for title, body in sections:
+            for piece in _chunk_text(body, config.chunk_size, config.chunk_overlap):
+                metadata = dict(raw.metadata)
+                metadata["section"] = title or "Introduction"
+                metadata["chunk_index"] = chunk_index
+                metadata["chunk_id"] = f"{doc_id}#{chunk_index}"
+                chunks.append(Chunk(text=piece, metadata=metadata))
+                chunk_index += 1
+        return self.upsert_chunks(chunks)
+
     def close(self) -> None:
         try:
             self.client.close()
