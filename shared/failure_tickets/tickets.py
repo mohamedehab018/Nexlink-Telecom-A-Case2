@@ -155,7 +155,6 @@ class TicketManager:
                     status=TicketStatus(row['status']),
                     description=row['description'],
                     created_at=row['created_at'],
-                    updated_at=row.get('updated_at')
                 )
                 for row in rows
             ]
@@ -191,7 +190,6 @@ class TicketManager:
                     status=TicketStatus(row['status']),
                     description=row['description'],
                     created_at=row['created_at'],
-                    updated_at=row.get('updated_at')
                 )
                 for row in rows
             ]

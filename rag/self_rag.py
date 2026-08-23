@@ -127,10 +127,18 @@ class HeuristicRelevance:
 class GroqCritic:
     """LLM critic following the Self-RAG reflection-token format."""
 
-    def __init__(self, model: Optional[str] = None, api_key: Optional[str] = None) -> None:
-        import groq
+    def __init__(
+        self,
+        model: Optional[str] = None,
+        api_key: Optional[str] = None,
+        base_url: Optional[str] = None,
+    ) -> None:
+        from rag.config import load_config
+        from rag.llm_client import make_llm_client
 
-        self._client = groq.Groq(api_key=api_key)
+        self._client = make_llm_client(
+            load_config(), api_key=api_key, base_url=base_url
+        )
         self._model = model or "llama-3.3-70b-versatile"
 
     def _call(self, prompt: str) -> str:
@@ -194,7 +202,11 @@ class SelfRAGVerifier:
         use_llm = config.use_llm_critic if use_llm is None else use_llm
         self._critic: Optional[GroqCritic] = None
         if use_llm and config.groq_api_key:
-            self._critic = GroqCritic(model=config.llm_model, api_key=config.groq_api_key)
+            self._critic = GroqCritic(
+                model=config.llm_model,
+                api_key=config.groq_api_key,
+                base_url=config.api_base_url,
+            )
         self._source = "llm" if self._critic else "heuristic"
 
     # --- post-retrieval check ---

@@ -9,6 +9,8 @@ fastmcp>=2.0,<3
 mcp>=1.28,<2
 langchain
 langchain-groq
+langchain-openai
+openai>=1.0
 langchain-mcp-adapters
 python-dotenv>=1.0
 pydantic>=2.0

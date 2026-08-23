@@ -87,12 +87,31 @@ class RAGConfig:
 
     # --- LLM (shared with the agent) ---
     llm_model: str = field(
-        default_factory=lambda: os.getenv("LLM_MODEL", "llama-3.3-70b-versatile")
+        default_factory=lambda: os.getenv(
+            "LLM_MODEL",
+            # Default must match the active provider: Groq's llama-3.3 id was
+            # retired there; on OpenRouter the equivalent lives at meta-llama/*.
+            "meta-llama/llama-3.3-70b-instruct"
+            if os.getenv("OPENROUTER_API_KEY")
+            else "llama-3.3-70b-versatile",
+        )
     )
 
     @property
     def groq_api_key(self) -> Optional[str]:
-        return os.getenv("GROQ_API_KEY")
+        """API key for whichever provider is configured (OpenRouter preferred)."""
+        return os.getenv("OPENROUTER_API_KEY") or os.getenv("GROQ_API_KEY")
+
+    @property
+    def using_openrouter(self) -> bool:
+        return bool(os.getenv("OPENROUTER_API_KEY"))
+
+    @property
+    def api_base_url(self) -> Optional[str]:
+        """Base URL override; None keeps each SDK's provider default."""
+        return os.getenv("OPENROUTER_BASE_URL") or (
+            "https://openrouter.ai/api/v1" if self.using_openrouter else None
+        )
 
     @property
     def openai_api_key(self) -> Optional[str]:

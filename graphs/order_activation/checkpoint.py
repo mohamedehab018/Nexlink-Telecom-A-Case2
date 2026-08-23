@@ -106,7 +106,7 @@ class CheckpointManager:
             cursor = conn.execute(
                 """SELECT state_data FROM checkpoints 
                    WHERE run_id = ? 
-                   ORDER BY step_number DESC 
+                   ORDER BY checkpoint_id DESC 
                    LIMIT 1""",
                 (run_id,)
             )
@@ -162,3 +162,21 @@ class CheckpointManager:
                 (run_id,)
             )
             return [dict(row) for row in cursor.fetchall()]
+
+    def get_paused_run(self, run_id: int) -> Optional[dict]:
+        """Return run metadata if the run exists and is paused, else None.
+
+        Used by resume_after_hitl to validate the run is in the right state
+        before reloading the checkpoint and continuing execution.
+        """
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.execute(
+                "SELECT run_id, thread_id, status FROM runs WHERE run_id = ?",
+                (run_id,)
+            )
+            row = cursor.fetchone()
+            if not row:
+                return None
+            d = dict(row)
+            return d if d["status"] == "paused" else None

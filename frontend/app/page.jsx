@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import TopBar from '../components/TopBar';
 import StatsCard from '../components/StatsCard';
 
@@ -35,6 +36,62 @@ export default function Dashboard() {
         title="Dashboard"
         subtitle="Overview of your MCP tool ecosystem"
       />
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', marginBottom: '24px' }}>
+        <Link
+          href="/chat"
+          style={{
+            background: 'var(--surface)',
+            border: '1px solid var(--line)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '14px 18px',
+            textDecoration: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            boxShadow: 'var(--shadow)',
+            transition: 'all 0.15s ease',
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--blue)')}
+          onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--line)')}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '1.25rem' }}>💬</span>
+            <div>
+              <div style={{ fontWeight: '600', fontSize: '0.875rem', color: 'var(--navy)' }}>User Support Chat</div>
+              <div style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>/chat • AI Customer Agent</div>
+            </div>
+          </div>
+          <span style={{ color: 'var(--blue)', fontSize: '0.85rem', fontWeight: '600' }}>Open →</span>
+        </Link>
+
+        <Link
+          href="/outages"
+          style={{
+            background: 'var(--surface)',
+            border: '1px solid var(--line)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '14px 18px',
+            textDecoration: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            boxShadow: 'var(--shadow)',
+            transition: 'all 0.15s ease',
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--blue)')}
+          onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--line)')}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '1.25rem' }}>🚨</span>
+            <div>
+              <div style={{ fontWeight: '600', fontSize: '0.875rem', color: 'var(--navy)' }}>Outage Console</div>
+              <div style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>/outages • Operations & HITL</div>
+            </div>
+          </div>
+          <span style={{ color: 'var(--blue)', fontSize: '0.85rem', fontWeight: '600' }}>Open →</span>
+        </Link>
+      </div>
 
       {error && <div className="alert alert-error">{error}</div>}
 

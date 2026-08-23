@@ -280,6 +280,18 @@ def schedule_technician_dispatch(account_id: int, description: str) -> Dict[str,
         return get_ticket_by_id(ticket_id)
 
 
+def update_account_address(account_id: int, new_address: str) -> Dict[str, Any]:
+    """Updates the account's address and returns the refreshed account row."""
+    query = "UPDATE ACCOUNTS SET address = ? WHERE account_id = ?"
+    with db_conn() as conn:
+        cursor = conn.cursor()
+        cursor.execute(query, (new_address, account_id))
+        conn.commit()
+        if cursor.rowcount == 0:
+            return None
+        return get_account_summary(account_id)
+
+
 def apply_billing_credit(account_id: int, ticket_id: int, amount_usd: float) -> Dict[str, Any]:
     """Appends billing credit notification to a ticket description."""
     update_desc = f" [CREDIT APPLIED: ${amount_usd:.2f}]"
