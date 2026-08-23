@@ -1,0 +1,40 @@
+.outage-page { max-width:1160px; }
+.outage-page header { margin-bottom:28px; }
+.outage-page .eyebrow { margin:0 0 8px; color:var(--blue); font-size:.74rem; font-weight:800; letter-spacing:.12em; }
+.outage-page h1 { margin:0; color:var(--navy); font-size:2.1rem; letter-spacing:-.04em; }
+.outage-page h2 { margin:0 0 18px; color:var(--navy); font-size:1.15rem; }
+.outage-page h3 { color:var(--navy); font-size:1rem; margin-top:26px; }
+.outage-page .subtitle { margin:8px 0 0; color:var(--muted); }
+.outage-page .panel, .outage-page article { background:var(--surface); border:1px solid var(--line); border-radius:14px; box-shadow:0 5px 18px rgb(15 38 67 / 5%); }
+.outage-page .panel { margin:18px 0; padding:24px; }
+.outage-page form, .outage-page .actions { display:flex; flex-wrap:wrap; align-items:end; gap:10px; }
+.outage-page label { display:grid; gap:6px; color:var(--muted); font-size:.78rem; font-weight:700; }
+.outage-page input { min-height:40px; border:1px solid #cbd5e1; border-radius:8px; padding:9px 11px; color:var(--ink); background:#fff; font:inherit; }
+.outage-page input:focus { outline:3px solid #bfdbfe; border-color:var(--blue); }
+.outage-page button { min-height:40px; border:0; border-radius:8px; padding:9px 14px; background:#e7edf7; color:var(--navy); cursor:pointer; font:700 .86rem inherit; transition:filter .15s,transform .15s; }
+.outage-page button:hover:not(:disabled) { filter:brightness(.96); transform:translateY(-1px); }
+.outage-page button:disabled { cursor:not-allowed; opacity:.48; }
+.outage-page .primary { background:var(--blue); color:white; }
+.outage-page .secondary { background:#e7eef8; }
+.outage-page .approve { background:var(--green); color:white; }
+.outage-page .reject { background:var(--red); color:white; }
+.outage-page table { width:100%; border-collapse:collapse; overflow:hidden; }
+.outage-page th { color:var(--muted); font-size:.75rem; letter-spacing:.04em; text-align:left; text-transform:uppercase; }
+.outage-page th, .outage-page td { padding:13px 10px; border-bottom:1px solid var(--line); }
+.outage-page tbody tr { cursor:pointer; }
+.outage-page tbody tr:hover { background:#f7faff; }
+.outage-page tbody tr:last-child td { border-bottom:0; }
+.outage-page .status-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin:0 0 20px; }
+.outage-page .status-grid span { display:grid; gap:7px; color:var(--muted); font-size:.75rem; }
+.outage-page .status { display:inline-flex; align-items:center; width:max-content; border-radius:999px; padding:4px 9px; background:#e7eef8; color:#334155; font-size:.72rem; font-weight:800; letter-spacing:.02em; }
+.outage-page .status-waiting-for-human, .outage-page .status-required, .outage-page .status-failure-ticket-open, .outage-page .status-open, .outage-page .status-investigating { color:var(--amber); background:var(--amber-bg); }
+.outage-page .status-completed, .outage-page .status-resolved, .outage-page .status-scheduled, .outage-page .status-approved, .outage-page .status-modified { color:var(--green); background:var(--green-bg); }
+.outage-page .status-failed, .outage-page .status-rejected, .outage-page .status-cancelled { color:var(--red); background:var(--red-bg); }
+.outage-page article { margin:12px 0; padding:16px; display:grid; gap:12px; }
+.outage-page .error { padding:12px 14px; border-radius:10px; color:var(--red); background:var(--red-bg); font-weight:700; }
+.outage-page pre { max-height:280px; margin:0; overflow:auto; border-radius:9px; padding:14px; background:#0f223b; color:#dbeafe; font-size:.78rem; line-height:1.5; }
+@media (max-width:700px) {
+  .outage-page .panel { padding:18px; }
+  .outage-page .status-grid { grid-template-columns:repeat(2,1fr); }
+  .outage-page table { font-size:.82rem; }
+}
