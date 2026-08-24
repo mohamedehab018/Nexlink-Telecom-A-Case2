@@ -24,24 +24,59 @@ from rag.config import load_config
 from rag.pipeline import RAGPipeline
 
 
-async def run_agent():
-    print("=" * 60)
-    print("Nextlink ISP AI Support Agent")
-    print("=" * 60)
+async def create_support_agent():
+    """Build the Nextlink support agent (LLM + RAG + MCP tools) once.
 
-    api_key = os.getenv("GROQ_API_KEY")
+    Extracted from ``run_agent`` so both the CLI loop and the FastAPI chat
+    backend (backend/routes/chat.py) share one agent construction path.
+    """
+    # OpenRouter (OpenAI-compatible, higher limits) is preferred when its key
+    # is set; otherwise fall back to Groq. Both use the ChatGroq client — it
+    # is a thin OpenAI-compatible wrapper whose base URL we override.
+    api_key = os.getenv("OPENROUTER_API_KEY") or os.getenv("GROQ_API_KEY")
     if not api_key:
-        print(
-            "Missing GROQ_API_KEY. Please set it in your environment "
-            "or .env file."
+        raise RuntimeError(
+            "Missing OPENROUTER_API_KEY or GROQ_API_KEY. Please set one in "
+            "your environment or .env file."
         )
-        return
 
-    model = ChatGroq(
-        model_name="llama-3.3-70b-versatile",
-        groq_api_key=api_key,
-        temperature=0.0,
+    using_openrouter = bool(os.getenv("OPENROUTER_API_KEY"))
+    model_name = os.getenv(
+        "OPENROUTER_MODEL" if using_openrouter else "GROQ_MODEL",
+        os.getenv("GROQ_MODEL", "openai/gpt-oss-120b"),
     )
+    # reasoning_effort is only accepted by reasoning models like gpt-oss
+    # (qwen et al. reject anything but none/default).
+    groq_kwargs: dict = {}
+    if "gpt-oss" in model_name:
+        groq_kwargs["reasoning_effort"] = os.getenv("GROQ_REASONING_EFFORT", "low")
+
+    if using_openrouter:
+        # The groq SDK hardcodes an `openai/v1/` path prefix, which 404s
+        # against OpenRouter — use the official OpenAI client instead.
+        from langchain_openai import ChatOpenAI
+
+        model = ChatOpenAI(
+            model=model_name,
+            api_key=api_key,
+            base_url="https://openrouter.ai/api/v1",
+            temperature=0.0,
+            max_retries=0,
+        )
+    else:
+        model = ChatGroq(
+            # llama-3.3-70b-versatile was retired by Groq on 2026-08-16;
+            # openai/gpt-oss-120b is their recommended replacement.
+            model_name=model_name,
+            groq_api_key=api_key,
+            groq_api_base=None,
+            temperature=0.0,
+            # The SDK's built-in retry sleeps silently for the server's full
+            # backoff window (minutes on 429), which looks like a hang to users.
+            # We handle rate-limit retries explicitly in the chat backend instead.
+            max_retries=0,
+            **groq_kwargs,
+        )
 
     # Knowledge-base (RAG) tool
     rag_config = load_config()
@@ -150,8 +185,26 @@ async def run_agent():
         }
     )
 
-    # Fetch available tools dynamically from server
-    tools = await mcp_client.get_tools()
+    # Fetch available tools dynamically from server.
+    # Only the support-agent relevant subset is bound: fewer tool schemas =
+    # fewer input tokens per LLM call (matters for free-tier rate limits).
+    SUPPORT_TOOL_NAMES = {
+        "get_account_summary",
+        "list_support_tickets",
+        "get_equipment_diagnostics",
+        "search_account_by_name",
+        "verify_account_identity",
+        "diagnose_equipment_issue",
+        "run_network_diagnostic_sweep",
+        "create_support_ticket",
+        "schedule_technician_dispatch",
+        "apply_billing_credit",
+        "update_account_address",
+    }
+    all_mcp_tools = await mcp_client.get_tools()
+    tools = [t for t in all_mcp_tools if t.name in SUPPORT_TOOL_NAMES]
+    if not tools:  # defensive fallback if server registry changes
+        tools = list(all_mcp_tools)
 
     print(
         f"Loaded {len(tools)} tools from MCP server.\n"
@@ -252,9 +305,28 @@ async def run_agent():
         system_prompt=system_prompt,
     )
 
-    print(
-        "Agent ready! (Type 'exit' or 'quit' to end session)\n"
-    )
+    # Pace LLM calls to stay under the provider's per-minute token cap
+    # (chat backend attaches this via config={"callbacks": [get_pacer()]}).
+    # The pacer is calibrated for Groq's ~8k tokens/minute free tier. On
+    # OpenRouter (~20 requests/minute) it would add minutes of sleep to
+    # every multi-step turn, so skip it entirely there.
+    from agent.llm_pacer import init_pacer
+
+    if not using_openrouter:
+        init_pacer()
+
+    print("Agent ready!")
+
+    return agent
+
+
+async def run_agent():
+    """Interactive CLI chat loop (the original entry point)."""
+    print("=" * 60)
+    print("Nextlink ISP AI Support Agent")
+    print("=" * 60)
+
+    agent = await create_support_agent()
 
     # Short-term rolling context + durable memory
     memory = MemorySystem()

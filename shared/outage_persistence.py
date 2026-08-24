@@ -10,6 +10,8 @@ from datetime import datetime, timezone
 from typing import Any
 from shared.failure_tickets.service import FailureTicketService
 from shared.failure_tickets.models import FailureType
+from shared.hitl.contract import HumanDecision
+from shared.hitl.store import SqliteHITLStore
 
 
 def _now() -> str:
@@ -21,6 +23,7 @@ class OutageRepository:
         self.path = path
         self.migrate()
         self.failure_svc = FailureTicketService(path)
+        self.hitl_store = SqliteHITLStore(path)
 
     def conn(self):
         c = sqlite3.connect(self.path)
@@ -62,15 +65,6 @@ class OutageRepository:
                     arguments_json TEXT NOT NULL,
                     result_json TEXT NOT NULL,
                     created_at TEXT NOT NULL
-                );
-                CREATE TABLE IF NOT EXISTS hitl_tasks (
-                    task_id TEXT PRIMARY KEY,
-                    thread_id TEXT NOT NULL,
-                    status TEXT NOT NULL,
-                    action_json TEXT NOT NULL,
-                    decision_json TEXT,
-                    created_at TEXT NOT NULL,
-                    updated_at TEXT NOT NULL
                 );
                 CREATE TABLE IF NOT EXISTS failure_tickets (
                     ticket_id TEXT PRIMARY KEY,
@@ -142,35 +136,28 @@ class OutageRepository:
                 (thread_id,)
             )]
 
-    # --- HITL operations (Person 1's implementation, Person 3's responsibility) ---
+    # --- HITL operations (delegated to the shared unified hitl_tasks store) ---
 
     def create_hitl(self, task_id, thread_id, action):
-        now = _now()
-        with self.conn() as c:
-            c.execute(
-                'INSERT INTO hitl_tasks VALUES(?,?,?,?,?,?,?)',
-                (task_id, thread_id, 'pending', json.dumps(action), None, now, now)
-            )
+        self.hitl_store.create_request(
+            run_id=thread_id, payload=action, thread_id=thread_id,
+            graph_type='outage', task_id=task_id,
+        )
 
     def decide_hitl(self, task_id, decision):
         """Commit one admin decision exactly once."""
-        with self.conn() as c:
-            result = c.execute(
-                'UPDATE hitl_tasks SET status=?,decision_json=?,updated_at=? '
-                'WHERE task_id=? AND status="pending"',
-                (decision['status'], json.dumps(decision), _now(), task_id),
-            )
-            if result.rowcount != 1:
-                raise ValueError('HITL task is no longer pending')
+        self.hitl_store.commit_decision(task_id, HumanDecision(
+            status=decision['status'],
+            actor_id=decision['actor_id'],
+            notes=decision.get('notes', ''),
+            modified_payload=decision.get('modification'),
+        ))
 
     def hitl(self, task_id):
-        with self.conn() as c:
-            r = c.execute('SELECT * FROM hitl_tasks WHERE task_id=?', (task_id,)).fetchone()
-            return dict(r) if r else None
+        return self.hitl_store.task(task_id)
 
     def hitls(self):
-        with self.conn() as c:
-            return [dict(r) for r in c.execute('SELECT * FROM hitl_tasks ORDER BY updated_at DESC')]
+        return self.hitl_store.tasks(graph_type='outage')
 
     # --- Failure ticket operations (using shared/failure_tickets) ---
 

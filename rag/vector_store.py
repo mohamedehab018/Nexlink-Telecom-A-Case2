@@ -43,13 +43,34 @@ def chunk_to_point_id(doc_id: str, chunk_index: int) -> int:
     return int.from_bytes(digest[:8], "little")
 
 
+# One QdrantClient per resolved storage path. Qdrant local mode takes an
+# exclusive file lock per folder, so a second instance (e.g. the chat
+# agent's RAG pipeline plus the /api/rag routes) must reuse the first
+# client instead of opening its own.
+_shared_clients: Dict[str, QdrantClient] = {}
+
+
+def _shared_client(path: str) -> QdrantClient:
+    from pathlib import Path
+
+    key = str(Path(path).resolve())
+    if key not in _shared_clients:
+        _shared_clients[key] = QdrantClient(
+            path=path,
+            # Sync endpoints run in FastAPI's threadpool, so the shared
+            # client must be usable from any thread.
+            force_disable_check_same_thread=True,
+        )
+    return _shared_clients[key]
+
+
 class VectorStore:
     """Thin, typed wrapper over a Qdrant collection."""
 
     def __init__(self, config: RAGConfig, embedder: EmbeddingProvider) -> None:
         self.config = config
         self.embedder = embedder
-        self.client = QdrantClient(path=config.vector_db_path)
+        self.client = _shared_client(config.vector_db_path)
         self.collection = config.collection_name
 
     # --- collection lifecycle ---

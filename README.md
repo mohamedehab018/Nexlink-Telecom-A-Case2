@@ -93,14 +93,14 @@ LATS is bounded to three evidence-scored outage candidates, stored in state; its
 
 `shared/checkpointing/` is reusable by every graph and records immutable SQLite checkpoints after each meaningful node transition. `shared/outage_persistence.py` adds incidents, runs, hypotheses, tool audit, HITL tasks, and failure tickets to the existing database. HITL (`pending/approved/rejected/modified`) is an expected business pause: the graph creates a durable admin task, waits, and uses the persisted admin decision to choose its next edge. Unexpected tool/schema/runtime errors instead create a distinct `failure_tickets` row (`open/investigating/resolved`); the graph cannot resume until an admin resolves that ticket. The idempotency ledger prevents completed dispatch side effects from repeating after restart.
 
-The FastAPI surface is `backend/app.py`; the associated Next.js console is `frontend/outage_ui/`. It lists incidents, opens persisted detail, and submits admin HITL decisions to the same backend. API endpoints include incident creation/list/details, checkpoint/tool history, HITL decisions, field results, tickets, and ticket recovery.
+The FastAPI surface is `backend/app.py`. The Next.js console is a single app in `frontend/` with routes for the admin dashboard (`/`), support chat (`/chat`), and outage operations (`/outages`). The outage page lists incidents, opens persisted detail, and submits admin HITL decisions to the same backend. API endpoints include incident creation/list/details, checkpoint/tool history, HITL decisions, field results, tickets, and ticket recovery.
 
 ### Run and demo
 
 ```powershell
 python -m pip install -r requirements.txt
 uvicorn backend.app:app --reload
-cd frontend/outage_ui; npm install; npm run dev
+cd frontend; npm install; npm run dev
 # POST /api/outages with {"account_id":1,"symptoms":["no internet"]}; approve via the UI/API; POST field-result.
 python scripts/outage_recovery_demo.py
 # launches a child process, kills it after its DIAGNOSING checkpoint,

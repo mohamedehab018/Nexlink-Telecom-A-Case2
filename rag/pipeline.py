@@ -80,7 +80,11 @@ class RAGPipeline:
 
     def _default_generator(self) -> Generator:
         if self.config.groq_api_key:
-            return GroqGenerator(model=self.config.llm_model, api_key=self.config.groq_api_key)
+            return GroqGenerator(
+                model=self.config.llm_model,
+                api_key=self.config.groq_api_key,
+                base_url=self.config.api_base_url,
+            )
         return ExtractiveGenerator()
 
     # --- indexing ---

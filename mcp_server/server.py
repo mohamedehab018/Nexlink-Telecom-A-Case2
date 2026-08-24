@@ -180,6 +180,19 @@ async def schedule_technician_dispatch(account_id: int, description: str, ctx: C
 
 
 @mcp.tool(
+    name="update_account_address",
+    description="Change the customer's address on file. Requires PIN verification."
+)
+async def update_account_address(account_id: int, new_address: str, ctx: Context) -> str:
+    session_id = auth.get_session_id(ctx)
+    return await tools_write.handle_update_account_address(
+        account_id=account_id,
+        new_address=new_address,
+        session_id=session_id
+    )
+
+
+@mcp.tool(
     name="apply_billing_credit",
     description="Apply credit to account. Amounts over $25 require supervisor sign-off."
 )

@@ -79,9 +79,9 @@ class QueryPlanner:
         self._client = None
         if config.groq_api_key:
             try:
-                import groq
+                from rag.llm_client import make_llm_client
 
-                self._client = groq.Groq(api_key=config.groq_api_key)
+                self._client = make_llm_client(config)
                 self._model = config.llm_model
             except Exception:
                 self._client = None

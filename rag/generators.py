@@ -62,11 +62,19 @@ class Generator(ABC):
 class GroqGenerator(Generator):
     """LLM generator using the Groq API (llama-3.3-70b-versatile by default)."""
 
-    def __init__(self, model: Optional[str] = None, api_key: Optional[str] = None) -> None:
-        import groq
+    def __init__(
+        self,
+        model: Optional[str] = None,
+        api_key: Optional[str] = None,
+        base_url: Optional[str] = None,
+    ) -> None:
+        from rag.config import load_config
+        from rag.llm_client import make_llm_client
 
         self._model = model or "llama-3.3-70b-versatile"
-        self._client = groq.Groq(api_key=api_key)
+        self._client = make_llm_client(
+            load_config(), api_key=api_key, base_url=base_url
+        )
 
     def generate(
         self,

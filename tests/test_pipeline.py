@@ -29,7 +29,9 @@ class TestAnswer(RAGTestCase):
             architecture="hybrid",
             metadata_filter={"category": "troubleshooting", "source_doc": "error_code_reference.md"},
         )
-        self.assertIn("ERR-9910", result.answer.upper())
+        # LLM output sometimes renders the code with a non-breaking hyphen.
+        normalized = result.answer.upper().replace("\u2011", "-").replace("\u2013", "-")
+        self.assertIn("ERR-9910", normalized)
         for c in result.contexts:
             self.assertEqual(c.source, "error_code_reference.md")
 

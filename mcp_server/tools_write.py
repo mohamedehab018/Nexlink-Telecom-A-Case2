@@ -99,6 +99,37 @@ async def handle_schedule_technician_dispatch(
     )
 
 
+async def handle_update_account_address(
+    account_id: int,
+    new_address: str,
+    session_id: str
+) -> str:
+    """Updates the account address after session auth validation."""
+    validate_tool_input("update_account_address", {
+        "account_id": account_id,
+        "new_address": new_address
+    })
+
+    if not auth.is_account_verified(session_id, account_id):
+        return (
+            f"SECURITY ERROR: Session unverified for Account #{account_id}. "
+            f"Please prompt the user to provide their 4-digit security PIN first."
+        )
+
+    if not db.account_exists(account_id):
+        return f"Error: Account #{account_id} does not exist."
+
+    updated = db.update_account_address(account_id, new_address)
+    if not updated:
+        return f"Error: Account #{account_id} does not exist."
+
+    return (
+        f"SUCCESS: Address updated for Account #{account_id} "
+        f"({updated['customer_name']}).\n"
+        f"  New address: {updated['address']}"
+    )
+
+
 async def handle_apply_billing_credit(
     account_id: int,
     ticket_id: int,

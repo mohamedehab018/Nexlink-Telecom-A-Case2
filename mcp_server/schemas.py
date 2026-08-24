@@ -98,6 +98,16 @@ SEARCH_ACCOUNT_SCHEMA = {
     "additionalProperties": False
 }
 
+UPDATE_ADDRESS_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "account_id": {"type": "integer", "minimum": 1},
+        "new_address": {"type": "string", "minLength": 3, "maxLength": 200}
+    },
+    "required": ["account_id", "new_address"],
+    "additionalProperties": False
+}
+
 TOOL_SCHEMAS: Dict[str, Dict[str, Any]] = {
     "verify_account_identity": VERIFY_ACCOUNT_SCHEMA,
     "get_account_summary": GET_ACCOUNT_SCHEMA,
@@ -109,6 +119,7 @@ TOOL_SCHEMAS: Dict[str, Dict[str, Any]] = {
     "schedule_technician_dispatch": SCHEDULE_DISPATCH_SCHEMA,
     "apply_billing_credit": APPLY_CREDIT_SCHEMA,
     "search_account_by_name": SEARCH_ACCOUNT_SCHEMA,
+    "update_account_address": UPDATE_ADDRESS_SCHEMA,
 }
 
 
