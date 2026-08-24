@@ -91,7 +91,7 @@ def _format_task(row: dict) -> dict:
 @router.get("/tasks", summary="List HITL tasks")
 def list_tasks(
     status: Optional[str] = Query(default=None, description="Filter by status: pending, approved, rejected, modified"),
-    graph_type: Optional[str] = Query(default=None, description="Filter by graph type: order_activation, outage, ..."),
+    graph_type: Optional[str] = Query(default=None, description="Filter by graph type: order_activation, outage, sla_dispute"),
     account_id: Optional[int] = Query(default=None, description="Filter by account ID"),
 ) -> list[dict]:
     """Return all HITL tasks, optionally filtered.
@@ -102,7 +102,29 @@ def list_tasks(
     - **account_id**: integer account identifier
     """
     rows = _store.tasks(status=status, graph_type=graph_type, account_id=account_id)
-    return [_format_task(r) for r in rows]
+    tasks = [_format_task(r) for r in rows]
+
+    # SLA-dispute review tasks live in their own table; surface them here so
+    # admins resolve every graph's HITL pauses through this one platform API.
+    if graph_type in (None, "sla_dispute") and status in (None, "pending", "approved", "rejected"):
+        from graphs.sla_dispute.hitl_tasks import hitl_task_manager
+
+        for t in hitl_task_manager.list_tasks(status=status):
+            tasks.append({
+                "task_id": f"sla-{t.task_id}",
+                "graph_type": "sla_dispute",
+                "thread_id": t.run_id,
+                "run_id": t.run_id,
+                "account_id": t.customer_id,
+                "task_type": t.task_type,
+                "status": t.status,
+                "description": t.message,
+                "decision": {"decision": t.decision} if t.decision else None,
+                "created_at": None,
+                "updated_at": None,
+            })
+
+    return tasks
 
 
 @router.post("/tasks/{task_id}/decide", summary="Approve / reject / modify a HITL task")
@@ -118,7 +140,58 @@ def decide_task(task_id: str, body: DecideIn) -> dict:
     automatically resumed after a successful decision and the resume result is
     embedded in the response under ``"resume_result"``.
     """
-    row = _task_or_404(task_id)
+    row = _task_or_404(task_id) if not task_id.startswith("sla-") else None
+
+    # SLA-dispute review: decide on its own table, then resume the paused
+    # LangGraph thread so the dispute run picks up the admin's decision.
+    if task_id.startswith("sla-"):
+        from langgraph.types import Command
+
+        from backend.routes.chat_agents import _sla_config, _get_sla_graph
+        from graphs.sla_dispute.hitl_tasks import hitl_task_manager
+
+        sla_id = int(task_id.split("-", 1)[1])
+        task = hitl_task_manager.get_task(sla_id)
+        if task is None:
+            raise HTTPException(status_code=404, detail=f"HITL task '{task_id}' not found")
+        if task.status != "pending":
+            raise HTTPException(
+                status_code=409,
+                detail=f"HITL task '{task_id}' has already been decided (status: {task.status})",
+            )
+        normalized = body.status.strip().lower()
+        if normalized == "approved":
+            decided = hitl_task_manager.approve(sla_id, reviewer=body.actor_id)
+            resume_decision = "approve"
+        elif normalized == "rejected":
+            decided = hitl_task_manager.reject(sla_id, reviewer=body.actor_id)
+            resume_decision = "reject"
+        else:
+            raise HTTPException(
+                status_code=422,
+                detail="SLA-dispute tasks support 'approved' or 'rejected' only",
+            )
+
+        resume_result: Any = None
+        try:
+            graph = _get_sla_graph()
+            resume_result = graph.invoke(
+                Command(resume=resume_decision),
+                config=_sla_config(task.run_id.removeprefix("chat-")),
+            )
+        except Exception as exc:  # noqa: BLE001 — surface as non-fatal detail
+            resume_result = {"error": str(exc)}
+
+        return {
+            "task": {
+                "task_id": task_id,
+                "graph_type": "sla_dispute",
+                "status": decided.status,
+                "decision": {"decision": decided.decision},
+            },
+            "message": f"Task '{task_id}' {body.status} by {body.actor_id}",
+            "resume_result": resume_result,
+        }
 
     if row["status"] != PENDING:
         raise HTTPException(

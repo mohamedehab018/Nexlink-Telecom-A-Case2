@@ -5,7 +5,7 @@ import { useSessions } from './SessionsProvider';
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 export default function ChatPage() {
-  const { activeId: sessionId, refreshSessions } = useSessions();
+  const { activeId: sessionId, refreshSessions, activeAgent } = useSessions();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
@@ -52,7 +52,7 @@ export default function ChatPage() {
       const res = await fetch(`${API}/api/chat/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, session_id: sessionId }),
+        body: JSON.stringify({ message: text, session_id: sessionId, agent_id: activeAgent }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -70,7 +70,7 @@ export default function ChatPage() {
     } finally {
       setSending(false);
     }
-  }, [input, sessionId, sending, refreshSessions]);
+  }, [input, sessionId, sending, refreshSessions, activeAgent]);
 
   const onKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -86,8 +86,8 @@ export default function ChatPage() {
           <h1>Nextlink Support</h1>
           <div className="sub">AI assistant for accounts, troubleshooting and activations</div>
         </div>
-        <span className="session-pill" title="This is your chat session ID">
-          {sessionId ? sessionId.slice(0, 18) + '…' : '…'}
+        <span className="session-pill" title="Active agent and chat session ID">
+          {activeAgent} · {sessionId ? sessionId.slice(0, 12) + '…' : '…'}
         </span>
       </header>
 

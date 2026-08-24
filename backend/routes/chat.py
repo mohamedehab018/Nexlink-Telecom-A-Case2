@@ -162,6 +162,7 @@ class SendIn(BaseModel):
     message: str = Field(min_length=1)
     session_id: Optional[str] = None
     user_id: str = "anonymous"
+    agent_id: Optional[str] = None  # support (default) | billing | dispatch
 
 
 @router.post("/send")
@@ -169,6 +170,26 @@ async def send_message(body: SendIn):
     """Send one user message; returns the agent's reply (one full turn)."""
     session_id = body.session_id or f"chat-{uuid4().hex}"
     chat_store.ensure_session(session_id, body.user_id)
+
+    # Agent switcher: billing -> SLA-dispute graph, dispatch ->
+    # order-activation graph. Both run against the same shared database.
+    agent_id = (body.agent_id or "support").strip().lower()
+    if agent_id in {"billing", "dispatch"}:
+        from backend.routes.chat_agents import run_billing_agent, run_dispatch_agent
+
+        state = session_state(session_id)
+        if agent_id == "billing":
+            reply = run_billing_agent(session_id, body.message, state.get("active_user_id"))
+        else:
+            reply = run_dispatch_agent(session_id, body.message)
+        chat_store.append(session_id, "user", body.message)
+        chat_store.append(session_id, "assistant", reply)
+        return {
+            "session_id": session_id,
+            "reply": reply,
+            "agent": agent_id,
+        }
+
     agent = await get_agent()
 
     state = session_state(session_id)
@@ -211,6 +232,22 @@ async def send_message(body: SendIn):
                 or "free-models-per-day" in detail
                 or "free-models-per-day" in detail.lower()
             )
+            # Transient upstream failures (provider overloaded, gateway 5xx).
+            # These clear in seconds — retry quickly instead of failing the
+            # user's turn.
+            transient = (
+                "temporarily overloaded" in detail.lower()
+                or "upstream error" in detail.lower()
+                or "'code': 502" in detail
+                or "'code': 503" in detail
+                or "code': 502" in detail
+                or "code': 503" in detail
+                or "bad gateway" in detail.lower()
+                or "service unavailable" in detail.lower()
+            )
+            if transient and attempt < 2:
+                await asyncio.sleep(3.0 * (attempt + 1))
+                continue
             if not rate_limited:
                 # Keep failures inside the CORS-wrapped response so the browser
                 # receives clean JSON (an unhandled 500 loses CORS headers and
