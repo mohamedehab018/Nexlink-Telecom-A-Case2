@@ -194,7 +194,26 @@ def evaluate_hitl_requirement(state: SLADisputeState) -> dict[str, Any]:
 
 
 def complete_dispute(state: SLADisputeState) -> dict[str, Any]:
-    response = state.get("customer_response") or "The SLA dispute has been reviewed and the approved resolution will be applied."
+    """Compose the final resolution message after the admin approves."""
+    decision = state.get("liability_decision") or "undetermined"
+    reasoning = (state.get("root_cause_reasoning")
+                 or state.get("liability_reasoning") or "").strip()
+    # Drop any pre-HITL sentence about needing approval so the final message
+    # can't contradict the approval that was just granted.
+    kept = [
+        s.strip() for s in reasoning.replace(";", ".").split(".")
+        if s.strip()
+        and "approval" not in s.lower()
+        and "sign-off" not in s.lower()
+        and "review" not in s.lower()
+    ]
+    response = (
+        f"Your SLA dispute has been APPROVED by the administrator. "
+        f"Liability rests with the {decision}."
+        + (f" {'.'.join(kept)}." if kept else "")
+        + f" The applicable service credit will be applied to account "
+          f"#{state.get('customer_id')}."
+    )
     return {"customer_response": response, "customer_reply": response, "current_state": "completed", "error": None}
 
 

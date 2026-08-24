@@ -13,7 +13,7 @@ export default function ToolCard({ tool, onToggle, onDelete }) {
   };
 
   return (
-    <tr>
+    <tr className={tool.enabled ? '' : 'tool-row-disabled'}>
       <td>
         <div style={{ fontWeight: 600 }}>{tool.name}</div>
         <div style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 2 }}>
