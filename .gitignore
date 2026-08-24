@@ -432,3 +432,6 @@ FodyWeavers.xsd
 # Local Qdrant index / generated data
 rag/vector_db/
 *.egg-info/
+
+# LangGraph sidecar checkpoints
+sla_dispute_checkpoints.sqlite*

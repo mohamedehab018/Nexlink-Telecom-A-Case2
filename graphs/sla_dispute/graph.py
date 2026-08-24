@@ -31,4 +31,9 @@ def build_sla_dispute_graph(checkpoint_manager: SLACheckpointManager | None = No
     graph.add_edge("complete_dispute", END)
     graph.add_edge("mark_failure", "create_failure_ticket")
     graph.add_edge("create_failure_ticket", END)
-    return graph.compile(checkpointer=manager.get_checkpointer())
+    compiled = graph.compile(checkpointer=manager.get_checkpointer())
+    # Keep the manager alive for as long as the graph is: its context manager
+    # closes the underlying sqlite connection when garbage-collected, which
+    # otherwise kills the checkpointer right after this function returns.
+    compiled._sla_checkpoint_manager = manager
+    return compiled

@@ -1,12 +1,11 @@
 'use client';
 
-import { useState } from 'react';
 import { useSessions } from '../app/chat/SessionsProvider';
 
 const AGENTS = [
   { id: 'support', label: 'Support Agent', available: true, description: 'Accounts, troubleshooting & activations' },
-  { id: 'billing', label: 'Billing Agent', available: false, description: 'Coming soon' },
-  { id: 'dispatch', label: 'Technician Dispatch', available: false, description: 'Coming soon' },
+  { id: 'billing', label: 'Billing Agent', available: true, description: 'SLA disputes with admin review' },
+  { id: 'dispatch', label: 'Technician Dispatch', available: true, description: 'New service activation' },
 ];
 
 function relativeTime(iso) {
@@ -20,7 +19,7 @@ function relativeTime(iso) {
 }
 
 export default function ChatNav() {
-  const [selected, setSelected] = useState('support');
+  const { activeAgent, setActiveAgent } = useSessions();
   const { activeId, sessions, switchTo, startNewChat } = useSessions();
 
   return (
@@ -57,9 +56,9 @@ export default function ChatNav() {
           <button
             key={agent.id}
             type="button"
-            className={`agent-item${agent.id === selected ? ' active' : ''}`}
+            className={`agent-item${agent.id === activeAgent ? ' active' : ''}`}
             disabled={!agent.available}
-            onClick={() => setSelected(agent.id)}
+            onClick={() => setActiveAgent(agent.id)}
             title={agent.description}
           >
             <span className="agent-dot" aria-hidden />
