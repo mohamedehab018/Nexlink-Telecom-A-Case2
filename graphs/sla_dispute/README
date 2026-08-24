@@ -1,0 +1,68 @@
+# Nexlink Telecom - SLA Dispute & Platform Integration
+
+This section contains the SLA Dispute workflow and its integration with the Nexlink Telecom platform.
+
+## SLA Dispute Graph
+
+The SLA Dispute workflow is implemented as a stateful graph with explicit states and transitions.
+
+Main files:
+
+- `states.py` - SLA dispute states and workflow data
+- `nodes.py` - SLA dispute workflow nodes
+- `graph.py` - graph construction and state transitions
+- `checkpoint.py` - checkpoint persistence and resume
+- `hitl.py` - Human-in-the-Loop workflow
+- `hitl_tasks.py` - HITL task creation and management
+
+## Human-in-the-Loop
+
+The SLA Dispute workflow includes human intervention for decisions that require administrator approval.
+
+The HITL system supports:
+
+- Creating HITL tasks
+- Pausing workflow execution
+- Approve / Reject actions
+- Resuming the workflow after a decision
+
+## Checkpointing
+
+The workflow uses persistent SQLite checkpoints to preserve state and support recovery.
+
+The checkpoint system supports:
+
+- Saving workflow state
+- Loading the latest checkpoint
+- Checkpoint history
+- Resuming interrupted runs
+
+## Failure Handling
+
+Failure handling is integrated with the workflow to support error recovery and failure-ticket management.
+
+## Memory and RAG Integration
+
+The implementation integrates the existing Memory/RAG functionality with the platform and agent workflows.
+
+## Platform Integration
+
+The workflow components are integrated with the backend platform, including:
+
+- Agents
+- Threads
+- Runs
+- HITL tasks
+- Failure tickets
+- Chat
+- RAG
+
+## Frontend Integration
+
+The frontend integration includes:
+
+- User Chat
+- Agent Switcher
+- HITL task actions
+- Approve / Reject controls
+- Workflow interaction with the backend
