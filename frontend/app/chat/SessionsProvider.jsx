@@ -13,7 +13,6 @@ function newSessionId() {
 export function SessionsProvider({ children }) {
   const [activeId, setActiveId] = useState(null);
   const [sessions, setSessions] = useState([]);
-  const [activeAgent, setActiveAgent] = useState('support');
 
   // Restore the last active session on mount (survives refresh), or create one.
   useEffect(() => {
@@ -56,7 +55,7 @@ export function SessionsProvider({ children }) {
 
   return (
     <SessionsContext.Provider
-      value={{ activeId, sessions, switchTo, startNewChat, refreshSessions, activeAgent, setActiveAgent }}
+      value={{ activeId, sessions, switchTo, startNewChat, refreshSessions }}
     >
       {children}
     </SessionsContext.Provider>
