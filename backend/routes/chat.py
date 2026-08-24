@@ -122,15 +122,33 @@ chat_store = ChatStore(DB_PATH)
 _agent: Any | None = None
 _agent_lock = asyncio.Lock()
 _session_states: dict[str, dict[str, Any]] = {}
+# The disabled-tool set the current agent was built with; when an admin
+# toggles a tool, the set drifts and the agent is rebuilt on next use so
+# tool changes visibly reach the live agent.
+_built_disabled: frozenset | None = None
+
+
+def _current_disabled() -> frozenset:
+    from agent.planning_agent import disabled_support_tools
+
+    return frozenset(disabled_support_tools())
 
 
 async def get_agent() -> Any:
-    global _agent
+    global _agent, _built_disabled
+    if _agent is not None and _built_disabled is None:
+        # Agent already built/injected before any registry read: snapshot the
+        # current config as its baseline instead of forcing a rebuild.
+        _built_disabled = _current_disabled()
+    # Tool config drift check (cheap registry read) — rebuild on change.
+    if _agent is not None and _current_disabled() != _built_disabled:
+        _agent = None
     if _agent is None:
         async with _agent_lock:
             if _agent is None:
                 try:
                     _agent = await create_support_agent()
+                    _built_disabled = _current_disabled()
                 except RuntimeError as exc:
                     raise HTTPException(503, str(exc))
                 except Exception as exc:  # RAG/MCP/network failures
@@ -207,8 +225,10 @@ async def send_message(body: SendIn):
         if item["role"] in {"user", "assistant"}
     ]
     # Cap the window sent to the LLM: long conversations were pushing every
-    # request past the provider's daily token budget (Groq free tier = 200k TPD).
-    rolling_messages = rolling_messages[-6:]
+    # request past the provider's per-minute token budget (Groq free tier =
+    # 8k TPM confirmed via rate-limit headers). Three turns keep context
+    # coherent while leaving room for more agent calls per minute.
+    rolling_messages = rolling_messages[-3:]
 
     result = None
     pacer = get_pacer()
@@ -248,6 +268,11 @@ async def send_message(body: SendIn):
             if transient and attempt < 2:
                 await asyncio.sleep(3.0 * (attempt + 1))
                 continue
+            # Disabled-tool call attempt: the model followed a stale prompt.
+            # Not retryable — answer gracefully below.
+            if "not in request.tools" in detail or "tool_use_failed" in detail:
+                result = None
+                break
             if not rate_limited:
                 # Keep failures inside the CORS-wrapped response so the browser
                 # receives clean JSON (an unhandled 500 loses CORS headers and
@@ -277,7 +302,47 @@ async def send_message(body: SendIn):
                     "switch OPENROUTER_MODEL/GROQ_MODEL in .env to another model.",
                 )
             await asyncio.sleep(min(wait + 2.0, 45))
-    reply = result["messages"][-1].content
+
+    # The model tried a tool that an admin disabled mid-session (binding was
+    # already updated). Answer gracefully instead of surfacing a 400.
+    if result is None:
+        reply = (
+            "I can't perform that action right now — the tool required for "
+            "it has been disabled by an administrator. Please try something "
+            "else, or ask your account question using your numeric account ID."
+        )
+        chat_store.append(session_id, "user", body.message)
+        chat_store.append(session_id, "assistant", reply)
+        return {"session_id": session_id, "reply": reply, "agent": "support"}
+
+    reply = result["messages"][-1].content or ""
+    # Reasoning models (qwen) sometimes emit only a <think> block, leaving
+    # content empty — either on the final message or after tool rounds.
+    # Recover the last non-empty text instead of sending a blank bubble.
+    if isinstance(reply, str):
+        reply = re.sub(r"<think>.*?</think>", "", reply, flags=re.DOTALL).strip()
+    if not str(reply).strip():
+        for m in reversed(result["messages"][:-1]):
+            # Only fall back to the model's own earlier text — never echo
+            # the user's message or tool-call envelopes.
+            if getattr(m, "type", "") != "ai" or getattr(m, "tool_calls", None):
+                continue
+            candidate = getattr(m, "content", "")
+            if isinstance(candidate, list):  # some providers return parts
+                candidate = " ".join(
+                    p.get("text", "") for p in candidate if isinstance(p, dict)
+                )
+            candidate = re.sub(
+                r"<think>.*?</think>", "", str(candidate), flags=re.DOTALL
+            ).strip()
+            if candidate:
+                reply = candidate
+                break
+    if not str(reply).strip():
+        reply = (
+            "I processed your request but couldn't compose a response "
+            "(the model returned only internal reasoning). Please send it again."
+        )
 
     for m in result["messages"]:
         for call in getattr(m, "tool_calls", None) or []:

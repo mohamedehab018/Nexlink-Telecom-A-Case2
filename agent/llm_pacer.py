@@ -71,11 +71,14 @@ class TokenPacer(AsyncCallbackHandler):
 _pacer: Optional[TokenPacer] = None
 
 
-def init_pacer(tpm: int = 8000, est_tokens_per_call: int = 3000) -> TokenPacer:
+def init_pacer(tpm: int = 8000, est_tokens_per_call: int = 2200) -> TokenPacer:
     """Create/reuse the process-wide pacer (call once at agent build time).
 
-    est_tokens_per_call=3000 lets two calls share a 60s window (~7k budget);
-    at 5000 only one fit, forcing every multi-step turn to wait a full minute.
+    Groq's live rate-limit header confirms 8,000 tokens/minute on the free
+    tier. At est=2200 three agent calls fit in the sliding window instead of
+    two, cutting multi-step turns (PIN verify -> update -> answer) from
+    minutes to roughly one window. Underestimating is safe: the chat
+    backend's retry loop absorbs any resulting 429.
     """
     global _pacer
     if _pacer is None:

@@ -7,7 +7,7 @@ from __future__ import annotations
 import json
 import sqlite3
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Optional
 from shared.failure_tickets.service import FailureTicketService
 from shared.failure_tickets.models import FailureType
 from shared.hitl.contract import HumanDecision
@@ -75,6 +75,10 @@ class OutageRepository:
                     resolution_json TEXT,
                     created_at TEXT NOT NULL,
                     updated_at TEXT NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS outage_ticket_threads (
+                    support_ticket_id INTEGER PRIMARY KEY,
+                    thread_id TEXT NOT NULL
                 );
             ''')
 
@@ -161,11 +165,18 @@ class OutageRepository:
 
     # --- Failure ticket operations (using shared/failure_tickets) ---
 
-    def failure(self, ticket_id, thread_id, error, checkpoint_id):
-        """Create failure ticket using shared module."""
+    def failure(self, ticket_id, thread_id, error, checkpoint_id) -> int:
+        """Record a graph failure: queue entry + thread pointer.
+
+        Writes the human-facing SUPPORT_TICKETS entry (via the shared
+        service), the graph-side ``failure_tickets`` pointer row so the run
+        can find its way home, and the support-id <-> thread mapping the
+        resolve endpoint needs. Returns the real support ticket id — the
+        caller must store it, not a freshly invented one.
+        """
         account_id = error.get('account_id', 0) if isinstance(error, dict) else 0
-        
-        self.failure_svc.handle_failure(
+
+        decision = self.failure_svc.handle_failure(
             run_id=0,
             thread_id=0,
             account_id=account_id,
@@ -174,6 +185,23 @@ class OutageRepository:
             failure_reason=error.get('message', 'Unknown error') if isinstance(error, dict) else str(error),
             state_data=error if isinstance(error, dict) else {"error": str(error)}
         )
+
+        now = _now()
+        with self.conn() as c:
+            c.execute(
+                '''INSERT INTO failure_tickets(ticket_id,thread_id,status,error_json,checkpoint_id,resolution_json,created_at,updated_at)
+                   VALUES(?,?,?,?,NULL,NULL,?,?)
+                   ON CONFLICT(ticket_id) DO UPDATE SET status='open',
+                     error_json=excluded.error_json, checkpoint_id=excluded.checkpoint_id,
+                     updated_at=excluded.updated_at''',
+                (str(ticket_id), str(thread_id),
+                 json.dumps(error, default=str), checkpoint_id, now, now)
+            )
+            c.execute(
+                "INSERT OR REPLACE INTO outage_ticket_threads(support_ticket_id,thread_id) VALUES(?,?)",
+                (decision.ticket_id, str(thread_id))
+            )
+        return decision.ticket_id
 
     def resolve_ticket(self, ticket_id, resolution):
         """Resolve failure ticket using shared module."""
@@ -185,18 +213,27 @@ class OutageRepository:
         self.failure_svc.resolve_ticket(int_ticket_id, json.dumps(resolution))
 
     def investigate_ticket(self, ticket_id, investigation):
-        """Record investigation using shared module."""
+        """Record investigation: move the ticket to 'ongoing', not closed."""
+        from shared.failure_tickets.models import TicketStatus, TicketUpdate
         try:
             int_ticket_id = int(str(ticket_id).replace('failure-', ''))
         except (ValueError, AttributeError):
             int_ticket_id = 0
-        
-        self.failure_svc.resolve_ticket(int_ticket_id, f"Investigating: {json.dumps(investigation)}")
+
+        current = self.failure_svc.tickets.get(int_ticket_id)
+        if current is None:
+            return
+        note = f"Investigating: {json.dumps(investigation)}"
+        self.failure_svc.tickets.update(int_ticket_id, TicketUpdate(
+            status=TicketStatus.ONGOING,
+            description=f"{current.description}\n{note}",
+        ))
 
     def tickets(self):
-        """List all failure tickets using shared module."""
+        """List unresolved failure tickets (open + investigating)."""
         from shared.failure_tickets.models import TicketStatus
         tickets = self.failure_svc.tickets.list_all(TicketStatus.OPEN)
+        tickets += self.failure_svc.tickets.list_all(TicketStatus.ONGOING)
         return [t.model_dump() for t in tickets]
 
     def ticket(self, ticket_id):
@@ -205,8 +242,61 @@ class OutageRepository:
             int_ticket_id = int(str(ticket_id).replace('failure-', ''))
         except (ValueError, AttributeError):
             return None
-        
+
         ticket = self.failure_svc.get_ticket_details(int_ticket_id)
         if not ticket:
             return None
         return ticket.model_dump()
+
+    def ticket_thread(self, ticket_id) -> Any:
+        """Thread linked to a ticket. Accepts either id form:
+        the graph-side 'failure-<uuid>' or the queue's integer id."""
+        tid = str(ticket_id)
+        with self.conn() as c:
+            if tid.startswith('failure-'):
+                row = c.execute(
+                    "SELECT thread_id FROM failure_tickets WHERE ticket_id = ?",
+                    (tid,),
+                ).fetchone()
+                return row["thread_id"] if row else None
+            try:
+                int_id = int(tid)
+            except ValueError:
+                return None
+            row = c.execute(
+                "SELECT thread_id FROM outage_ticket_threads WHERE support_ticket_id = ?",
+                (int_id,),
+            ).fetchone()
+            return row["thread_id"] if row else None
+
+    def _support_ticket_id(self, ticket_id) -> Optional[int]:
+        """Resolve either id form to the SUPPORT_TICKETS integer id."""
+        tid = str(ticket_id)
+        try:
+            return int(tid)
+        except ValueError:
+            pass
+        thread = self.ticket_thread(tid)
+        if thread is None:
+            return None
+        with self.conn() as c:
+            row = c.execute(
+                "SELECT support_ticket_id FROM outage_ticket_threads WHERE thread_id = ?",
+                (str(thread),),
+            ).fetchone()
+            return row[0] if row else None
+
+    def ticket_resolved(self, ticket_id) -> bool:
+        """True when the queue ticket linked to this graph failure is closed.
+
+        SUPPORT_TICKETS uses 'closed' (via the shared service); 'resolved'
+        is accepted as an alias so either wording works.
+        """
+        support_id = self._support_ticket_id(ticket_id)
+        if support_id is None:
+            return False
+        t = self.ticket(str(support_id))
+        if not t:
+            return False
+        status = str(t.get("status")).lower().split(".")[-1]
+        return status in {"closed", "resolved"}

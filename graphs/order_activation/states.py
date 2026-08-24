@@ -53,6 +53,9 @@ class ActivationData:
     messages: list[dict[str, str]] = field(default_factory=list)
     current_step: str = ""
     error: Optional[str] = None
+    # LLM addition #1 (task decomposition): ordered provisioning plan produced
+    # in the START node and checkpointed with the rest of the state.
+    provisioning_plan: list[str] = field(default_factory=list)
 
     def add_message(self, role: str, content: str) -> None:
         """Add a message to the conversation history."""
@@ -85,6 +88,7 @@ class ActivationData:
             "current_step": self.current_step,
             "error": self.error,
             "messages": self.messages,
+            "provisioning_plan": self.provisioning_plan,
         }
 
     @classmethod
@@ -115,4 +119,5 @@ class ActivationData:
             current_step=data.get("current_step", ""),
             error=data.get("error"),
             messages=list(data.get("messages", [])),
+            provisioning_plan=list(data.get("provisioning_plan", [])),
         )

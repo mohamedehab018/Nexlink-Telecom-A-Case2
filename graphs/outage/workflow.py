@@ -59,7 +59,14 @@ class OutageWorkflow:
                     return s
             return s
         except Exception as exc:
-            s.update(error={'node':s.get('current_state'),'message':str(exc),'kind':type(exc).__name__},ticket_status='FAILURE_TICKET_OPEN',current_state='FAILED');self._checkpoint(s);ticket=f'failure-{uuid4().hex}';s['failure_ticket_id']=ticket;self.repository.failure(ticket,s['thread_id'],s['error'],s['checkpoint_id']);return self._checkpoint(s)
+            s.update(error={'node':s.get('current_state'),'account_id':s.get('account_id'),'message':str(exc),'kind':type(exc).__name__},ticket_status='FAILURE_TICKET_OPEN',current_state='FAILED');self._checkpoint(s)
+            # Persist the REAL queue ticket id (repository.failure returns
+            # the SUPPORT_TICKETS id) linked to this thread via the same id,
+            # so resolve-from-queue can find and resume this run.
+            tid=f'failure-{uuid4().hex[:8]}'
+            self.repository.failure(tid,s['thread_id'],s['error'],s['checkpoint_id'])
+            s['failure_ticket_id']=tid
+            return self._checkpoint(s)
     def decide_human_action(self,s,actor_id,status,notes='',modification=None):
         if s.get('current_state')!='WAITING_FOR_HUMAN' or status not in {'approved','rejected','modified'}:raise ValueError('invalid HITL decision')
         if status == 'modified' and not modification: raise ValueError('a modified decision requires a modification payload')
@@ -75,7 +82,8 @@ class OutageWorkflow:
     def resume_failure(self,s):
         if s.get('current_state')!='FAILED':return self.advance(s)
         ticket_id=s.get('failure_ticket_id')
-        if not ticket_id or self.repository.ticket(ticket_id)['status']!='resolved':
+        # The queue closes tickets (status 'closed'); accept either wording.
+        if not ticket_id or not self.repository.ticket_resolved(ticket_id):
             raise ValueError('a failure ticket must be resolved before the graph can resume')
         s.update(ticket_status='RESOLVED',current_state=(s.get('error') or {}).get('node','DIAGNOSING'),error=None);return self.advance(self._checkpoint(s))
     def approve_human_action(self,s,actor_id,notes=''): return self.decide_human_action(s,actor_id,'approved',notes)

@@ -24,6 +24,7 @@ numpy
 
 # --- Agentic RAG graph ---
 langgraph
+langgraph-checkpoint-sqlite
 langchain-core
 
 # --- Keyword (BM25) leg ---

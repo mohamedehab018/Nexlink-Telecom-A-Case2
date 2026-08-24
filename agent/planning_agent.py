@@ -24,6 +24,27 @@ from rag.config import load_config
 from rag.pipeline import RAGPipeline
 
 
+def disabled_support_tools() -> set[str]:
+    """Support-allowlist tool names an admin disabled via the Tools page.
+
+    Read live from the MCP runtime registry so admin toggles are enforced.
+    Any failure (registry missing/unreadable) disables nothing — tools stay
+    available rather than breaking the agent.
+    """
+    try:
+        from mcp_server.runtime_core.manager import MCPToolManager
+
+        db_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "..", "db", "nexlink.db"
+        )
+        manager = MCPToolManager(os.path.abspath(db_path))
+        return {
+            t.name for t in manager.list_tools(enabled_only=False) if not t.enabled
+        }
+    except Exception:
+        return set()
+
+
 async def create_support_agent():
     """Build the Nextlink support agent (LLM + RAG + MCP tools) once.
 
@@ -202,7 +223,13 @@ async def create_support_agent():
         "update_account_address",
     }
     all_mcp_tools = await mcp_client.get_tools()
-    tools = [t for t in all_mcp_tools if t.name in SUPPORT_TOOL_NAMES]
+    # Admin toggles from the Tools page are enforced here: disabled tools are
+    # excluded from the binding, so the agent physically cannot call them.
+    disabled = disabled_support_tools()
+    tools = [
+        t for t in all_mcp_tools
+        if t.name in SUPPORT_TOOL_NAMES and t.name not in disabled
+    ]
     if not tools:  # defensive fallback if server registry changes
         tools = list(all_mcp_tools)
 
@@ -214,6 +241,24 @@ async def create_support_agent():
     tools = list(tools) + [
     nextlink_knowledge_base,
 ]
+
+    # Keep the prompt consistent with the actual binding: advertising a tool
+    # the model cannot call makes it emit invalid tool calls (Groq rejects
+    # them with 'not in request.tools').
+    name_search_rule = (
+        "• Searching by Name:\n"
+        "  - Call search_account_by_name(customer_name=...).\n"
+        "  - Retrieve the account_id and use it for subsequent calls.\n\n"
+        if "search_account_by_name" not in disabled
+        else (
+            "• Searching by Name:\n"
+            "  - Name lookup is TEMPORARILY DISABLED by an administrator.\n"
+            "  - NEVER attempt to search by name. Ask the customer for their\n"
+            "    numeric account ID instead, then call "
+            "get_account_summary(account_id).\n\n"
+        )
+    )
+
     system_prompt = (
         "You are the Nextlink ISP Support Assistant.\n"
         "Always use available tools to query customer data and perform "
@@ -240,11 +285,7 @@ async def create_support_agent():
         "=====================================================\n"
         "1. CORE NAVIGATION & QUERY RULES\n"
         "=====================================================\n"
-
-        "• Searching by Name:\n"
-        "  - Call search_account_by_name(customer_name=...).\n"
-        "  - Retrieve the account_id and use it for subsequent calls.\n\n"
-
+        f"{name_search_rule}"
         "• Account Summaries:\n"
         "  - Use get_account_summary(account_id=...).\n"
         "  - NEVER expose sensitive security PINs.\n\n"
@@ -297,6 +338,18 @@ async def create_support_agent():
         "  If approval is denied, state the rejection plainly and do not "
         "retry silently."
     )
+
+    if disabled:
+        system_prompt += (
+            "\n\n=====================================================\n"
+            "ADMINISTRATOR TOOL POLICY\n"
+            "=====================================================\n"
+            f"The following tools are currently DISABLED and are NOT in your "
+            f"available tools: {', '.join(sorted(disabled))}.\n"
+            "Never call them and never claim to have used them. If a request "
+            "requires one of them, tell the customer it is temporarily "
+            "unavailable and offer the closest alternative."
+        )
 
     # Build agent graph
     agent = create_agent(

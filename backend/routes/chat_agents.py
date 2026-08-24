@@ -88,10 +88,11 @@ def run_billing_agent(
         final = result if isinstance(result, dict) else (getattr(result, "values", {}) or {})
         ticket = final.get("failure_ticket_id")
         if decision == "approve":
+            # complete_dispute composes the definitive resolution message.
+            composed = (final.get("customer_response") or "").strip()
             return (
-                f"The administrator approved your dispute (task #{task.task_id}). "
-                f"{final.get('liability_reasoning', '').strip() or ''}".strip()
-                or f"Dispute approved (task #{task.task_id})."
+                composed
+                or f"The administrator approved your dispute (task #{task.task_id})."
             )
         return (
             f"The administrator rejected your dispute (task #{task.task_id}): "
@@ -110,14 +111,15 @@ def run_billing_agent(
             key = (session_id, decided_task.task_id)
             if key not in _sla_reported:
                 _sla_reported.add(key)
+                # complete_dispute composes the definitive resolution text
+                # during the resumed run; prefer it over stale pre-HITL
+                # liability reasoning.
                 if decided_task.decision == "approve":
+                    final_response = (values.get("customer_response") or "").strip()
                     return (
-                        f"Update on your SLA dispute (task #{decided_task.task_id}): "
+                        final_response
+                        or f"Update on your SLA dispute (task #{decided_task.task_id}): "
                         f"the administrator approved it."
-                        + (
-                            f" {values.get('liability_reasoning', '').strip()}"
-                            if values.get("liability_reasoning") else ""
-                        )
                     )
                 ticket = values.get("failure_ticket_id")
                 return (
@@ -196,6 +198,9 @@ def run_billing_agent(
 _REQUIRED_SLOTS = ("customer_name", "address", "plan_id", "pin")
 
 _pending_dispatch: dict[str, dict[str, Any]] = {}
+# Per-session tracking of the last activation run so follow-up questions
+# ("is it activated?") report status instead of starting a new graph run.
+_dispatch_runs: dict[str, dict[str, Any]] = {}
 
 _activation_graph: Any = None
 
@@ -252,8 +257,80 @@ def _extract_slots(message: str, slots: dict[str, Any]) -> list[str]:
     return filled
 
 
+def _run_status(run_id: int) -> Optional[str]:
+    import sqlite3
+
+    conn = sqlite3.connect(DB)
+    try:
+        row = conn.execute(
+            "SELECT status FROM runs WHERE run_id = ?", (run_id,)
+        ).fetchone()
+        return row[0] if row else None
+    finally:
+        conn.close()
+
+
+def _dispatch_followup(session_id: str, message: str) -> Optional[str]:
+    """Report the tracked activation's status instead of re-running the graph.
+
+    Returns a reply when this message is a follow-up on the tracked run, or
+    ``None`` when the message clearly starts a NEW activation (contains
+    activation wording plus fresh details).
+    """
+    info = _dispatch_runs.get(session_id)
+    if not info:
+        return None
+
+    lowered = message.lower()
+    starts_new = (
+        ("activate" in lowered or "activation" in lowered)
+        and any(k in lowered for k in ("plan", "pin", "address"))
+    )
+    if starts_new:
+        _dispatch_runs.pop(session_id, None)
+        return None
+
+    run_id = info["run_id"]
+    status = _run_status(run_id)
+
+    if status == "paused":
+        return (
+            f"Not yet — activation for {info['customer_name']} "
+            f"(account #{info['account_id']}) is paused at supervisor "
+            f"approval (HITL task #{info['task_id']}). It resumes from its "
+            f"checkpoint as soon as they decide on the admin console."
+        )
+    if status == "completed":
+        _dispatch_runs.pop(session_id, None)  # reported; allow new activations
+        return (
+            f"Yes — service is active for {info['customer_name']} "
+            f"(account #{info['account_id']}). The graph resumed from its "
+            f"checkpoint after approval and completed all provisioning steps."
+        )
+    if status == "failed":
+        _dispatch_runs.pop(session_id, None)
+        ticket = info.get("ticket_id")
+        return (
+            f"The activation for {info['customer_name']} failed"
+            + (f" (support ticket #{ticket})" if ticket else "")
+            + ". The failure was logged and the run cannot resume until the "
+              "ticket is resolved."
+        )
+
+    # 'running' or unknown: report transient state.
+    return (
+        f"The activation for {info['customer_name']} is currently in progress "
+        f"(status: {status or 'unknown'}). Ask again in a moment."
+    )
+
+
 def run_dispatch_agent(session_id: str, message: str) -> str:
     """Route one chat turn into the order-activation graph."""
+    # Follow-up about an existing run? Report status; don't start a new one.
+    followup = _dispatch_followup(session_id, message)
+    if followup is not None:
+        return followup
+
     slots = _pending_dispatch.setdefault(session_id, {})
     _extract_slots(message, slots)
 
@@ -285,6 +362,14 @@ def run_dispatch_agent(session_id: str, message: str) -> str:
         return f"The activation graph hit an unexpected error: {exc}"
 
     if result.get("paused"):
+        _pending_dispatch.pop(session_id, None)
+        # Track the paused run so follow-ups report status, not a new graph.
+        _dispatch_runs[session_id] = {
+            "run_id": result.get("run_id"),
+            "task_id": result.get("task_id"),
+            "account_id": result.get("account_id"),
+            "customer_name": slots["customer_name"],
+        }
         return (
             f"I've queued the activation for {slots['customer_name']} "
             f"(account #{result.get('account_id')}). It needs supervisor "

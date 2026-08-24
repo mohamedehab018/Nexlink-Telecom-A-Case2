@@ -9,6 +9,7 @@ from .states import GraphState, ActivationData
 from .checkpoint import CheckpointManager
 from .hitl import HITLManager
 from .failure import FailureManager
+from .llm_additions import decompose_activation_request, run_equipment_react
 from .tools import (
     create_account, assign_equipment, configure_equipment,
     activate_service, send_welcome_message, check_equipment_available
@@ -355,6 +356,23 @@ class ActivationGraph:
         data.current_step = "start"
         data.add_message("system", "Starting activation process")
 
+        # LLM addition #1 — task decomposition: turn the request into an
+        # ordered provisioning plan (checkpointed with the state) and pick
+        # the equipment model that fits the plan tier. Falls back to the
+        # deterministic default plan when no LLM is available.
+        if not data.provisioning_plan:
+            plan = decompose_activation_request(
+                data.customer_name, data.address, data.plan_id
+            )
+            data.provisioning_plan = plan["steps"]
+            if plan.get("equipment_model") and not data.equipment_model:
+                data.equipment_model = plan["equipment_model"]
+            data.add_message(
+                "system",
+                f"Provisioning plan: {' -> '.join(data.provisioning_plan)}"
+                + (f" [{plan['plan_note']}]" if plan.get("plan_note") else ""),
+            )
+
         if data.account_id:
             return GraphState.VERIFY_IDENTITY
         return GraphState.CREATE_ACCOUNT
@@ -392,9 +410,9 @@ class ActivationGraph:
         """Handle equipment check."""
         data.current_step = "check_equipment"
 
-        # Check what equipment the customer needs
-        # For now, default to WiFi-V3 for residential
-        model_type = "WiFi-V3"
+        # Equipment model comes from the decomposition plan when available;
+        # the deterministic default stays for offline runs.
+        model_type = data.equipment_model or "WiFi-V3"
 
         availability = check_equipment_available(model_type, self.db_path)
 
@@ -425,6 +443,33 @@ class ActivationGraph:
     def _handle_configure_equipment(self, data: ActivationData) -> GraphState:
         """Handle equipment configuration."""
         data.current_step = "configure_equipment"
+
+        # LLM addition #2 — constrained ReAct: the model reasons tool-by-tool
+        # over a WHITELIST of read/provision tools only (check, assign,
+        # configure). Activation/welcome are not on the whitelist and stay
+        # hard-gated in graph code. Falls back to the deterministic handler
+        # below when no LLM is available.
+        if data.account_id and not data.equipment_serial:
+            react = run_equipment_react(
+                account_id=data.account_id,
+                plan_id=data.plan_id,
+                preferred_model=data.equipment_model,
+                db_path=self.db_path,
+            )
+            if react is not None:
+                if not react.get("success"):
+                    data.failure_reason = react.get("error", "Constrained ReAct failed")
+                    return GraphState.FAILURE
+                data.equipment_serial = react.get("serial_num")
+                data.configured = True
+                for thought in react.get("thoughts", []):
+                    if thought:
+                        data.add_message("system", f"ReAct: {thought}")
+                data.add_message(
+                    "system",
+                    f"Equipment {data.equipment_serial} assigned and configured via constrained ReAct",
+                )
+                return GraphState.TEST_CONNECTION
 
         if not data.equipment_serial:
             # Assign equipment first

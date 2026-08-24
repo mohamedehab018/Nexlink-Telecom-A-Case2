@@ -3,12 +3,22 @@
 The graph reads account data through the existing MCP database module and uses
 the repository's RAG policy corpus when available; neither path is required for
 the workflow to give an auditable human-review result.
+
+LLM-call additions inside named nodes (two of the four allowed techniques):
+
+* RAG architecture — ``store_sla_evidence``: retrieves the applicable credit /
+  SLA policy clauses from the shared vector store instead of hardcoding one
+  file, so liability is grounded in the terms that match this claim.
+* Tree of Thoughts — ``select_root_cause``: every candidate root cause is a
+  branch; the LLM scores each branch against the claim evidence before one is
+  selected, because a wrong root cause flips liability.
 """
 from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
 
+from graphs.llm_additions import chat_json
 from mcp_server.db import create_support_ticket, get_account_summary, get_equipment_by_account, list_support_tickets
 
 from .states import SLADisputeState
@@ -57,15 +67,113 @@ def store_root_cause_candidates(state: SLADisputeState) -> dict[str, Any]:
 
 
 def select_root_cause(state: SLADisputeState) -> dict[str, Any]:
+    """LLM addition — Tree of Thoughts over candidate root causes.
+
+    Each candidate is one branch; the LLM scores every branch against the
+    claim and the collected evidence, then selects the strongest with an
+    explicit rationale. Falls back to the first heuristic candidate when the
+    LLM is unavailable so the graph stays runnable offline.
+    """
     candidates = state.get("root_cause_candidates", [])
     if not candidates:
         raise ValueError("No root-cause candidates are available.")
-    return {"selected_root_cause": candidates[0], "current_state": "root_cause_selected"}
+
+    verdict = chat_json(
+        system=(
+            "You are a telecom SLA-dispute analyst performing Tree of Thoughts "
+            "reasoning. You will be given candidate explanations (branches) "
+            "for a service complaint plus the account evidence. Score each "
+            "branch 0-100 for how well it explains the claim, then select the "
+            "best branch. Respond with ONLY a JSON object: "
+            '{"branches": [{"branch": <1-based int>, "score": <0-100>, '
+            '"note": "<short reason>"}], "selected": <1-based int>, '
+            '"reasoning": "<2-3 sentence justification>"}'
+        ),
+        user=(
+            f"CLAIM:\n{state.get('claim_details', '').strip()}\n\n"
+            f"EVIDENCE:\n" + "\n".join(state.get("root_cause_evidence", [])[:6]) + "\n\n"
+            "CANDIDATE BRANCHES:\n"
+            + "\n".join(f"{i + 1}. {c}" for i, c in enumerate(candidates))
+        ),
+    )
+
+    selected_idx = None
+    if verdict:
+        try:
+            selected_idx = int(verdict.get("selected")) - 1
+        except (TypeError, ValueError):
+            selected_idx = None
+        if selected_idx is None or not (0 <= selected_idx < len(candidates)):
+            selected_idx = None
+
+    if selected_idx is None:
+        # Deterministic fallback keeps the graph auditable without an LLM.
+        return {"selected_root_cause": candidates[0], "current_state": "root_cause_selected"}
+
+    branches = verdict.get("branches") if isinstance(verdict.get("branches"), list) else []
+    return {
+        "selected_root_cause": candidates[selected_idx],
+        "root_cause_reasoning": str(verdict.get("reasoning", "")).strip(),
+        "tot_branches": [
+            {
+                "branch": b.get("branch"),
+                "score": b.get("score"),
+                "note": b.get("note"),
+            }
+            for b in branches
+            if isinstance(b, dict)
+        ],
+        "current_state": "root_cause_selected",
+    }
+
+
+_rag_pipeline: Any = None
+
+
+def _get_rag_pipeline():
+    """Lazy, process-wide RAG pipeline over the shared policy corpus."""
+    global _rag_pipeline
+    if _rag_pipeline is None:
+        from rag.config import load_config
+        from rag.pipeline import RAGPipeline
+
+        _rag_pipeline = RAGPipeline(config=load_config(), auto_index=True)
+    return _rag_pipeline
 
 
 def store_sla_evidence(state: SLADisputeState) -> dict[str, Any]:
-    documents = state.get("retrieved_documents") or _policy_evidence()
-    return {"retrieved_documents": documents, "sla_terms": state.get("sla_terms") or documents[0][:400], "current_state": "sla_evidence_retrieved"}
+    """LLM addition — RAG architecture node.
+
+    Retrieves the SLA/credit policy chunks that match this specific claim
+    from the repository's shared vector store (the same corpus the support
+    agent indexes), instead of hardcoding one markdown file. Falls back to
+    the static policy file when the store is unavailable.
+    """
+    documents = state.get("retrieved_documents")
+    sla_terms = state.get("sla_terms")
+    if not documents:
+        try:
+            result = _get_rag_pipeline().answer(
+                state.get("claim_details", "SLA credit policy"),
+                architecture="hybrid",
+                verify=False,
+            )
+            docs = [
+                f"[{getattr(c, 'metadata', {}).get('source', 'policy')}] {c.text}"
+                for c in getattr(result, "contexts", []) or []
+            ]
+            if docs:
+                documents = docs
+                sla_terms = (getattr(result, "answer", "") or "").strip() or docs[0][:400]
+        except Exception:
+            documents = None  # fall through to the static file below
+        if not documents:
+            documents = _policy_evidence()
+    return {
+        "retrieved_documents": documents,
+        "sla_terms": sla_terms or documents[0][:400],
+        "current_state": "sla_evidence_retrieved",
+    }
 
 
 def determine_liability(state: SLADisputeState) -> dict[str, Any]:
@@ -86,7 +194,26 @@ def evaluate_hitl_requirement(state: SLADisputeState) -> dict[str, Any]:
 
 
 def complete_dispute(state: SLADisputeState) -> dict[str, Any]:
-    response = state.get("customer_response") or "The SLA dispute has been reviewed and the approved resolution will be applied."
+    """Compose the final resolution message after the admin approves."""
+    decision = state.get("liability_decision") or "undetermined"
+    reasoning = (state.get("root_cause_reasoning")
+                 or state.get("liability_reasoning") or "").strip()
+    # Drop any pre-HITL sentence about needing approval so the final message
+    # can't contradict the approval that was just granted.
+    kept = [
+        s.strip() for s in reasoning.replace(";", ".").split(".")
+        if s.strip()
+        and "approval" not in s.lower()
+        and "sign-off" not in s.lower()
+        and "review" not in s.lower()
+    ]
+    response = (
+        f"Your SLA dispute has been APPROVED by the administrator. "
+        f"Liability rests with the {decision}."
+        + (f" {'.'.join(kept)}." if kept else "")
+        + f" The applicable service credit will be applied to account "
+          f"#{state.get('customer_id')}."
+    )
     return {"customer_response": response, "customer_reply": response, "current_state": "completed", "error": None}
 
 

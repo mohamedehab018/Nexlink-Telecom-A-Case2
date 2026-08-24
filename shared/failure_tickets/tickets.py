@@ -73,7 +73,6 @@ class TicketManager:
                 status=TicketStatus(row['status']),
                 description=row['description'],
                 created_at=row['created_at'],
-                updated_at=row.get('updated_at')
             )
 
     def update(self, ticket_id: int, update: TicketUpdate) -> Optional[TicketResponse]:

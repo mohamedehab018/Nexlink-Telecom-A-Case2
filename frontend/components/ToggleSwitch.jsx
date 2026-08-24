@@ -10,6 +10,9 @@ export default function ToggleSwitch({ enabled, onChange, disabled }) {
         disabled={disabled}
       />
       <span className="toggle-slider" />
+      <span className={`toggle-state ${enabled ? 'toggle-on' : 'toggle-off'}`}>
+        {enabled ? 'Enabled' : 'Disabled'}
+      </span>
     </label>
   );
 }

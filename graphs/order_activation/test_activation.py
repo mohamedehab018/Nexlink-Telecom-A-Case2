@@ -1,14 +1,18 @@
 """Tests for Order-to-Activation Graph."""
+import os
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+# Deterministic unit tests: keep the LLM technique additions off so the
+# graph exercises its fallback paths (set NEXLINK_GRAPH_LLM=1 to see them).
+os.environ.setdefault("NEXLINK_GRAPH_LLM", "0")
 
 try:
     import pytest
 except ImportError:
     pytest = None
 import sqlite3
-import os
 import tempfile
 from graphs.order_activation.states import GraphState, ActivationData
 from graphs.order_activation.graph import ActivationGraph

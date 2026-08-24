@@ -7,6 +7,12 @@ Tests the unified HITL REST API:
 from __future__ import annotations
 
 import os
+
+# Deterministic tests: keep the activation graph's LLM technique additions
+# off so decisions don't attempt live LLM calls during auto-resume.
+os.environ.setdefault("NEXLINK_GRAPH_LLM", "0")
+
+import os
 import sqlite3
 import tempfile
 from pathlib import Path
