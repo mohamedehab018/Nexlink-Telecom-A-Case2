@@ -435,3 +435,7 @@ rag/vector_db/
 
 # LangGraph sidecar checkpoints
 sla_dispute_checkpoints.sqlite*
+
+# Python bytecode caches
+__pycache__/
+*.pyc
