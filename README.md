@@ -109,6 +109,20 @@ python scripts/outage_recovery_demo.py
 
 The legacy planning correction remains intentionally small: `planning/planning_lab/algorithms/decomposition.py` preserves the caller goal, validates structured DAG output, runs real MCP-bound tasks through the executor, and avoids planning invented tools.
 
+## Two LLM-Call Additions per State Graph
+
+Each state graph integrates two of the four allowed LLM-call techniques inside specific nodes. The pairing was chosen per problem shape, not for coverage; every addition fails closed to a documented deterministic fallback so the graphs stay runnable offline (set `NEXLINK_GRAPH_LLM=0` to force the fallbacks, e.g. in unit tests).
+
+| State graph | Node(s) | Technique | Why this problem needs it here | Why not the other techniques |
+| --- | --- | --- | --- | --- |
+| Outage diagnosis (`graphs/outage/`) | HYPOTHESIS_GENERATION (`_lats`) | LATS | Three competing failure hypotheses must be evidence-scored before dispatch; a wrong winner sends a $150 truck roll | No knowledge corpus is consulted during diagnosis; RAG adds nothing |
+| Outage diagnosis (`graphs/outage/`) | VERIFYING (`_constrained_react`) | Constrained ReAct | Verification probes several tools step-by-step; the whitelist keeps the model away from arbitrary MCP capabilities and every call is audited | The candidate set is already fixed — no search over thought branches needed |
+| SLA dispute (`graphs/sla_dispute/nodes.py`) | `store_sla_evidence` | RAG architecture | Liability hinges on which credit/outage policy clauses apply to *this* claim; retrieval grounds the decision in the matching terms from the shared policy vector store instead of one hardcoded file, reusing the corpus the support agent indexes | No multi-step action sequence exists to constrain; no plan to decompose |
+| SLA dispute (`graphs/sla_dispute/nodes.py`) | `select_root_cause` | Tree of Thoughts | Every candidate root cause is a branch scored against the claim evidence; the chosen branch plus its reasoning is persisted in state because picking wrong flips liability between provider and customer | LATS look-ahead adds nothing once the small candidate set is generated upstream |
+| Order activation (`graphs/order_activation/`) | START (`_handle_start` → `decompose_activation_request`) | Task decomposition | Activation is several dependent provisioning steps whose order and parameters depend on the specific order (coverage check → equipment model by plan tier → configure); the plan is persisted on `ActivationData.provisioning_plan` and checkpointed, so resumes continue the same plan | There are no competing hypotheses to weigh (no ToT/LATS) and no policy corpus to retrieve (no RAG) |
+| Order activation (`graphs/order_activation/llm_additions.py`) | CONFIGURE_EQUIPMENT (`run_equipment_react`) | Constrained ReAct | Equipment selection/assignment depends on plan tier and stock, so the model reasons tool-by-tool — but only `check_equipment_available`, `assign_equipment` and `configure_equipment` are whitelisted; service activation itself stays outside the model's reach, hard-gated in graph code | No knowledge lookup is involved in provisioning; decomposition already happened at START |
+
+
 ## Database Architecture
 
 To execute provisioning and diagnostics, the MCP server connects to a local relational database (SQLite). The schema enforces strict data integrity using `AUTOINCREMENT` integer primary keys, explicit foreign key relations, and strict `CHECK` constraints to emulate Enums for equipment statuses and ticketing.

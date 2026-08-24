@@ -120,7 +120,7 @@ def list_hitl_tasks():
 
 @router.get("/failure-tickets")
 def list_failure_tickets():
-    """List all failure tickets."""
+    """List all unresolved failure tickets (open + investigating)."""
     return repo.tickets()
 
 
@@ -142,8 +142,12 @@ def resolve_ticket(ticket_id: str, body: ResolveIn):
     t = repo.ticket(ticket_id)
     if not t:
         raise HTTPException(404, "unknown ticket")
+    thread_id = repo.ticket_thread(ticket_id)
     try:
         repo.resolve_ticket(ticket_id, body.model_dump())
-        return workflow.resume_failure(state_or_404(t['thread_id']))
+        if not thread_id:
+            # Ticket has no linked outage run — nothing to resume.
+            return {"resolved": True, "resume": None}
+        return workflow.resume_failure(state_or_404(str(thread_id)))
     except ValueError as exc:
         raise HTTPException(409, str(exc))

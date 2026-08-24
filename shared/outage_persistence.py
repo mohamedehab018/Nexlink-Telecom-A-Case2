@@ -185,18 +185,27 @@ class OutageRepository:
         self.failure_svc.resolve_ticket(int_ticket_id, json.dumps(resolution))
 
     def investigate_ticket(self, ticket_id, investigation):
-        """Record investigation using shared module."""
+        """Record investigation: move the ticket to 'ongoing', not closed."""
+        from shared.failure_tickets.models import TicketStatus, TicketUpdate
         try:
             int_ticket_id = int(str(ticket_id).replace('failure-', ''))
         except (ValueError, AttributeError):
             int_ticket_id = 0
-        
-        self.failure_svc.resolve_ticket(int_ticket_id, f"Investigating: {json.dumps(investigation)}")
+
+        current = self.failure_svc.tickets.get(int_ticket_id)
+        if current is None:
+            return
+        note = f"Investigating: {json.dumps(investigation)}"
+        self.failure_svc.tickets.update(int_ticket_id, TicketUpdate(
+            status=TicketStatus.ONGOING,
+            description=f"{current.description}\n{note}",
+        ))
 
     def tickets(self):
-        """List all failure tickets using shared module."""
+        """List unresolved failure tickets (open + investigating)."""
         from shared.failure_tickets.models import TicketStatus
         tickets = self.failure_svc.tickets.list_all(TicketStatus.OPEN)
+        tickets += self.failure_svc.tickets.list_all(TicketStatus.ONGOING)
         return [t.model_dump() for t in tickets]
 
     def ticket(self, ticket_id):
@@ -205,8 +214,21 @@ class OutageRepository:
             int_ticket_id = int(str(ticket_id).replace('failure-', ''))
         except (ValueError, AttributeError):
             return None
-        
+
         ticket = self.failure_svc.get_ticket_details(int_ticket_id)
         if not ticket:
             return None
         return ticket.model_dump()
+
+    def ticket_thread(self, ticket_id) -> Any:
+        """Raw thread_id recorded on the failure_tickets row (for resume)."""
+        try:
+            int_ticket_id = int(str(ticket_id).replace('failure-', ''))
+        except (ValueError, AttributeError):
+            return None
+        with self.conn() as c:
+            row = c.execute(
+                "SELECT thread_id FROM failure_tickets WHERE ticket_id = ?",
+                (str(ticket_id).replace('failure-', ''),),
+            ).fetchone()
+            return row["thread_id"] if row else None

@@ -9,6 +9,9 @@ class SLADisputeState(TypedDict, total=False):
     current_state: str
     root_cause_candidates: List[str]
     selected_root_cause: Optional[str]
+    # Tree-of-Thoughts artefacts from the select_root_cause node
+    root_cause_reasoning: Optional[str]
+    tot_branches: Optional[List[dict]]
     root_cause_evidence: List[str]
     retrieved_documents: List[str]
     sla_terms: Optional[str]
