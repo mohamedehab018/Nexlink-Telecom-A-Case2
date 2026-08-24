@@ -1,4 +1,4 @@
-# Person 3 — Enterprise SLA Breach Dispute | HITL System | User Platform
+# Enterprise SLA Breach Dispute | HITL System | User Platform
 
 > **Owner:** Person 3 — `SLA Breach Dispute Graph + Shared HITL System + User Chat & Agent Switcher + Memory/RAG fixes`
 > **Project:** `Nexlink-Telecom-A-Case2` | **Date:** 24 Aug 2026
